@@ -556,7 +556,7 @@ public class ChessBoard {
         //针对棋盘上同时存在前后的情况进行处理 马八进九 h0g2
         char piece = hasGo?board[toI][toJ] : board[fromI][fromJ];
         //士象不特殊处理
-        if(piece == 'a' || piece == 'b' || piece== 'A' || piece == 'B'){
+        if(piece == 'a' || piece == 'b' || piece== 'A' || piece == 'B' || piece == ' '){
             return "";
         }
         char[][] tempBoard ;
