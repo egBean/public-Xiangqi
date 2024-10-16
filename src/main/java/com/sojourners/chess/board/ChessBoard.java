@@ -559,10 +559,15 @@ public class ChessBoard {
         if(piece == 'a' || piece == 'b' || piece== 'A' || piece == 'B'){
             return "";
         }
-        //先还原棋盘
-        char[][] tempBoard = XiangqiUtils.copyArray(board);
-        tempBoard[toI][toJ] = ' ';
-        tempBoard[fromI][fromJ] = piece;
+        char[][] tempBoard ;
+        if(!hasGo){
+            tempBoard = board;
+        }else{
+            //还原棋盘
+            tempBoard = XiangqiUtils.copyArray(board);
+            tempBoard[toI][toJ] = ' ';
+            tempBoard[fromI][fromJ] = piece;
+        }
         //起始列有几个相同棋子 及坐标信息保存
         List<Integer> samePieceIndexList = new ArrayList<>();
         for(int i = 0;i<10;i++){
