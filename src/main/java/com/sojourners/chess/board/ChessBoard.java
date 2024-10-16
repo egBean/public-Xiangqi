@@ -559,6 +559,11 @@ public class ChessBoard {
         if(piece == 'a' || piece == 'b' || piece== 'A' || piece == 'B' || piece == ' '){
             return "";
         }
+        //非兵情况
+        if(piece != 'p' && piece != 'P'){
+            return normalFrontAndBack(piece,hasGo,toI,toJ,fromI,fromJ,isRed);
+        }
+        //是兵情况
         char[][] tempBoard ;
         if(!hasGo){
             tempBoard = board;
@@ -585,14 +590,6 @@ public class ChessBoard {
         }
         //位于这一列的第几个记录一下
         int count = samePieceIndexList.indexOf(fromI);
-
-        //非兵的情况下
-        if(piece != 'p' && piece != 'P'){
-            if(count == 0){
-                return "前"+ map.get(piece);
-            }
-            return "后" + map.get(piece);
-        }
 
         //检查其他线是否有前后兵
         int index = -1;
@@ -633,6 +630,25 @@ public class ChessBoard {
             return FOUR_AND_FIVE_P[sameCount+count]+ map.get(piece);
         }
         return FOUR_AND_FIVE_P[count]+ map.get(piece);
+    }
+
+    /**
+     * 普通情况下的前后检查处理
+     */
+    private String normalFrontAndBack(char piece,boolean hasGo,int toI,int toJ,int fromI,int fromJ,boolean isRed) {
+        for(int i =0;i<10;i++){
+            if((!hasGo &&i == fromI)||(hasGo&&fromJ == toJ&&i == toI)){
+                continue;
+            }
+            if(piece == board[i][fromJ]){
+                //说明有重复情况
+                if((isRed&&i>fromI) || (!isRed&&i<fromI)){
+                    return "前"+ map.get(piece);
+                }
+                return "后"+ map.get(piece);
+            }
+        }
+        return "";
     }
 
     private char getPos(int j, boolean isRed) {
