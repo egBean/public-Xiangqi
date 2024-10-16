@@ -19,6 +19,9 @@ public class ChessBoard {
 
     private static char[][] copyBoard = new char[10][9];
 
+    private static final String[] THREE_P= new String[]{"前","中","后"};
+    private static final String[] FOUR_AND_FIVE_P= new String[]{"一","二","三","四","五"};
+
     private BoardSize boardSize;
 
     private boolean stepTip;
@@ -492,19 +495,6 @@ public class ChessBoard {
     }
 
 
-    private char[][] copyArray(char[][] originalArray ){
-        char[][] copiedArray = new char[originalArray.length][];
-
-        for (int i = 0; i < originalArray.length; i++) {
-            copiedArray[i] = new char[originalArray[i].length];
-            System.arraycopy(originalArray[i], 0, copiedArray[i], 0, originalArray[i].length);
-        }
-        return copiedArray;
-    }
-
-    private static final String[] THREE_P= new String[]{"前","中","后"};
-    private static final String[] FOUR_AND_FIVE_P= new String[]{"一","二","三","四","五"};
-
     private void translateStep(char[][] board, StringBuilder sb, String move, boolean hasGo) {
         if (StringUtils.isEmpty(move) || move.length() < 4) {
             sb.append(move);
@@ -575,13 +565,13 @@ public class ChessBoard {
         }
 
         //先还原棋盘
-        copyBoard = copyArray(board);
-        copyBoard[toI][toJ] = ' ';
-        copyBoard[fromI][fromJ] = piece;
+        char[][] tempBoard = XiangqiUtils.copyArray(board);
+        tempBoard[toI][toJ] = ' ';
+        tempBoard[fromI][fromJ] = piece;
         //起始列有几个相同棋子 及坐标信息保存
         List<Integer> samePieceIndexList = new ArrayList<>();
         for(int i = 0;i<10;i++){
-            if(piece == copyBoard[i][fromJ]){
+            if(piece == tempBoard[i][fromJ]){
                 samePieceIndexList.add(i);
             }
         }
@@ -602,7 +592,7 @@ public class ChessBoard {
                     continue;
                 }
                 for(int i = 0;i<10;i++){
-                    if(piece == copyBoard[i][j]){
+                    if(piece == tempBoard[i][j]){
                         sameCount ++;
                     }
                 }
@@ -634,7 +624,7 @@ public class ChessBoard {
                     continue;
                 }
                 for(int i = 0;i<10;i++){
-                    if(piece == copyBoard[i][j]){
+                    if(piece == tempBoard[i][j]){
                         sameCount ++;
                     }
                 }
