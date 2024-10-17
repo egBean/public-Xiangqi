@@ -1253,6 +1253,19 @@ public class Controller implements EngineCallBack {
     }
 
     @FXML
+    public void bookTableClick(MouseEvent event) {
+        if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+            if (robotAnalysis.getValue()) {
+                BookData bd = bookTable.getSelectionModel().getSelectedItem();
+                Platform.runLater(() -> {
+                    board.move(bd.getMove());
+                    goCallBack(bd.getMove());
+                });
+            }
+        }
+    }
+
+    @FXML
     public void exit() {
         if (engine != null) {
             engine.close();

@@ -239,7 +239,7 @@
                                              <content>
                                                 <BorderPane prefHeight="200.0" prefWidth="200.0">
                                                    <center>
-                                                      <TableView fx:id="bookTable" prefHeight="200.0" prefWidth="200.0" style="-fx-background-insets: 100%;" stylesheets="@../style/table.css" BorderPane.alignment="CENTER">
+                                                      <TableView fx:id="bookTable" onMouseClicked="#bookTableClick" prefHeight="200.0" prefWidth="200.0" style="-fx-background-insets: 100%;" stylesheets="@../style/table.css" BorderPane.alignment="CENTER">
                                                         <columns>
                                                           <TableColumn editable="false" prefWidth="75.0" sortable="false" text="招法" />
                                                           <TableColumn editable="false" prefWidth="64.0" sortable="false" text="分数" />
