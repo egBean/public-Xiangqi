@@ -856,9 +856,34 @@ public class Controller implements EngineCallBack {
                     editChessBoardClick(null);
                 } else if ("复制局面图片".equals(item.getText())) {
                     copyImageMenuClick(null);
+                }else if("复制棋谱".equals(item.getText())){
+                    copyChessManualClick(null);
                 }
             }
         });
+    }
+
+    @FXML
+    public void copyChessManualClick(ActionEvent e) {
+        String fenCode = this.fenCode;
+        StringBuilder result = new StringBuilder("[FEN "+"\"" + fenCode +"\"]\n");
+        //拿到所有棋谱
+        ObservableList<ManualRecord> itemList = this.getRecordTable().getItems();
+        int count = 1;
+        for (int i = 1;i<itemList.size();i++){
+            String name = itemList.get(i).getName();
+            name = name.substring(0,name.length()-2);
+            if(i%2 == 1){
+                result.append("  ").append(count).append(". ").append(name).append("\n");
+                continue;
+            }
+            result.append("     ").append(name).append("\n");
+            count++;
+
+        }
+        result.append("  *\n");
+        result.append("感谢使用t-chess");
+        ClipboardUtils.setText(result.toString());
     }
 
     @FXML
