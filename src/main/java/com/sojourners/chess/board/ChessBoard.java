@@ -559,37 +559,34 @@ public class ChessBoard {
         if(piece == 'a' || piece == 'b' || piece== 'A' || piece == 'B' || piece == ' '){
             return "";
         }
-        //非兵情况
-        if(piece != 'p' && piece != 'P'){
-            return normalFrontAndBack(piece,hasGo,toI,toJ,fromI,fromJ,isRed);
-        }
-        //是兵情况
-        char[][] tempBoard ;
-        if(!hasGo){
-            tempBoard = board;
-        }else{
-            //还原棋盘
-            tempBoard = XiangqiUtils.copyArray(board);
-            tempBoard[toI][toJ] = ' ';
-            tempBoard[fromI][fromJ] = piece;
-        }
-        //起始列有几个相同棋子 及坐标信息保存
-        List<Integer> samePieceIndexList = new ArrayList<>();
-        for(int i = 0;i<10;i++){
-            if(piece == tempBoard[i][fromJ]){
-                samePieceIndexList.add(i);
-            }
-        }
-        if(samePieceIndexList.size() == 1){
+        //拿到列的重复棋子序号
+        List<Integer> samePieceIndexList = querySamePieceIndexList(piece,hasGo,toI,toJ,fromI,fromJ);
+        if(samePieceIndexList.size() <= 1){
             return "";
         }
-
-        //两个以上情况
         if(!isRed){
             Collections.reverse(samePieceIndexList);
         }
         //位于这一列的第几个记录一下
         int count = samePieceIndexList.indexOf(fromI);
+        //非兵情况
+        if(piece != 'p' && piece != 'P'){
+            if(samePieceIndexList.size() == 2){
+                if(count == 0){
+                    return "前"+ map.get(piece);
+                }
+                return "后" + map.get(piece);
+            }
+        }
+
+        //是兵情况
+        char[][] tempBoard = board;
+        if(hasGo){
+            //还原棋盘
+            tempBoard = XiangqiUtils.copyArray(board);
+            tempBoard[toI][toJ] = ' ';
+            tempBoard[fromI][fromJ] = piece;
+        }
 
         //检查其他线是否有前后兵
         int index = -1;
@@ -630,6 +627,33 @@ public class ChessBoard {
             return FOUR_AND_FIVE_P[sameCount+count]+ map.get(piece);
         }
         return FOUR_AND_FIVE_P[count]+ map.get(piece);
+    }
+
+    private List<Integer> querySamePieceIndexList(char piece,boolean hasGo, int toI, int toJ, int fromI, int fromJ) {
+        List<Integer> samePieceIndexList = new ArrayList<>();
+        if(!hasGo){
+            //没有走棋
+            for(int i = 0;i<10;i++){
+                if(piece == board[i][fromJ]){
+                    samePieceIndexList.add(i);
+                }
+            }
+            return samePieceIndexList;
+        }
+
+        for(int i = 0;i<10;i++){
+            if(fromJ == toJ && i == toI){
+                continue;
+            }
+            if(i == fromI){
+                samePieceIndexList.add(i);
+                continue;
+            }
+            if(piece == board[i][fromJ]){
+                samePieceIndexList.add(i);
+            }
+        }
+        return samePieceIndexList;
     }
 
     /**
