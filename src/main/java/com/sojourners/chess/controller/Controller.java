@@ -511,6 +511,18 @@ public class Controller implements EngineCallBack {
         }
     }
 
+    @FXML
+    public void pastChessManualClick(ActionEvent e) {
+        fenCode = "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1";
+        newChessBoard(fenCode);
+        moveList = new ArrayList<>();
+        moveList.add("e3e4");
+        moveList.add("e6e5");
+        for(int i = 0;i< moveList.size();i++){
+            recordTable.getItems().add(new ManualRecord(i+1, board.translate(moveList.get(i), false), 0));
+        }
+    }
+
 
     @FXML
     public void exportImageMenuClick(ActionEvent e) {
@@ -859,6 +871,9 @@ public class Controller implements EngineCallBack {
                 }else if("复制棋谱".equals(item.getText())){
                     copyChessManualClick(null);
                 }
+                else if("粘贴棋谱".equals(item.getText())){
+                    pastChessManualClick(null);
+                }
             }
         });
     }
@@ -1064,7 +1079,7 @@ public class Controller implements EngineCallBack {
     /**
      * 做个缓冲 避免界面卡顿
      */
-    private  ArrayBlockingQueue<ThinkData> CACHE_TD_QUEUE = new ArrayBlockingQueue<>(10);
+    private final ArrayBlockingQueue<ThinkData> CACHE_TD_QUEUE = new ArrayBlockingQueue<>(10);
 
     private void initCacheConsumer(){
         Thread thread = new Thread(() -> {
