@@ -494,6 +494,16 @@ public class ChessBoard {
         return this.board;
     }
 
+    /**
+     * 将棋谱转成棋盘标记 如马八进七->h0g2
+     * @param board 棋盘
+     * @param manual 棋谱 如八进七
+     * @param redGo 红走还是黑走
+     * @return move 如h0g2
+     */
+    private String translateManual(char[][] board,String manual,boolean redGo){
+        return null;
+    }
 
     private void translateStep(char[][] board, StringBuilder sb, String move, boolean hasGo) {
         if (StringUtils.isEmpty(move) || move.length() < 4) {
