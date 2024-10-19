@@ -534,12 +534,13 @@ public class Controller implements EngineCallBack {
         char[][] tempBoard = XiangqiUtils.copyArray(this.board.getBoard());
 
         boolean tempRedGo = redGo;
+        lineChartSeries.getData().add(new XYChart.Data<>(0, 0));
         for(int i = 0;i< manualList.size();i++){
             String manual = manualList.get(i);
             String move = ManualConverter.convert(tempBoard, tempRedGo, manual);
             moveList.add(move);
             recordTable.getItems().add(new ManualRecord(i+1, manual+"  ", 0));
-            lineChartSeries.getData().add(new XYChart.Data<>(i, 0));
+            lineChartSeries.getData().add(new XYChart.Data<>(i+1, 0));
             tempRedGo = !tempRedGo;
         }
     }
