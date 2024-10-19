@@ -62,49 +62,47 @@ public class ManualConverter {
      */
     public static final String convert(char[][] board,boolean redGo,String move){
         //定位初始坐标
-        Integer[] from = buildFrom(board,redGo,move);
+        int[] from = buildFrom(board,redGo,move);
         //构建偏移量
-        Integer[] offset = buildOffset(redGo,move,from);
+        int[] offset = buildOffset(redGo,move,from);
 
         //构建返回结果
-        StringBuilder result = new StringBuilder();
-        result.append(INDEX_LIST.get(from[0])).append(9-from[1])
-                .append(INDEX_LIST.get(from[0]+offset[0])).append(9-(from[1]+offset[1]));
+        String result = INDEX_LIST.get(from[0]) + (9 - from[1]) +
+                INDEX_LIST.get(from[0] + offset[0]) + (9 - (from[1] + offset[1]));
         board[from[1]+offset[1]][from[0]+offset[0]] = board[from[1]][from[0]];
         board[from[1]][from[0]] = ' ';
-        return result.toString();
+        return result;
     }
 
-    private static Integer[] buildOffset(boolean redGo, String move,Integer[] from) {
+    private static int[] buildOffset(boolean redGo, String move,int[] from) {
         String first = String.valueOf(move.charAt(0));
-        String second = String.valueOf(move.charAt(1));
         String third = String.valueOf(move.charAt(2));
         String forth = String.valueOf(move.charAt(3));
-        Character piece = null;
 
+        char chinesePiece = ' ';
         if(map.containsKey(first)){
-            piece = redGo?Character.toUpperCase(map.get(first)):map.get(first);
+            chinesePiece = move.charAt(0);
         }else{
-            piece = redGo?Character.toUpperCase(map.get(second)):map.get(second);
+            chinesePiece = move.charAt(1);
         }
 
-        Integer[] result = new Integer[2];
+        int[] result = new int[2];
 
-        if('车'==piece || '炮'==piece || '兵'==piece||'卒'==piece || '帅'==piece||'将'==piece){
+        if('车'==chinesePiece || '炮'==chinesePiece || '兵'==chinesePiece||'卒'==chinesePiece || '帅'==chinesePiece||'将'==chinesePiece){
             if(third.equals("平")){
                 int toJ = redGo? 9-NUMBER_MAP.get(forth) : Integer.parseInt(forth)-1;
                 result[0] = toJ - from[0];
                 return result;
             }
             if((third.equals("进") && redGo) || (third.equals("退") && !redGo)){
-                result[1] = -Integer.parseInt(forth);
+                result[1] = redGo?-NUMBER_MAP.get(forth):-Integer.parseInt(forth);
                 return result;
             }else{
-                result[1] = Integer.parseInt(forth);
+                result[1] = redGo?NUMBER_MAP.get(forth):Integer.parseInt(forth);
                 return result;
             }
         }
-        if('相'==piece || '象'==piece){
+        if('相'==chinesePiece || '象'==chinesePiece){
             if((third.equals("进") && redGo) || (third.equals("退") && !redGo)){
                 result[1] = -2 ;
                 int toJ = redGo? 9-NUMBER_MAP.get(forth) : Integer.parseInt(forth)-1;
@@ -117,7 +115,7 @@ public class ManualConverter {
                 return result;
             }
         }
-        if( '仕'==piece ||'士'==piece){
+        if( '仕'==chinesePiece ||'士'==chinesePiece){
             if((third.equals("进") && redGo) || (third.equals("退") && !redGo)){
                 result[1] = -1 ;
                 int toJ = redGo? 9-NUMBER_MAP.get(forth) : Integer.parseInt(forth)-1;
@@ -130,7 +128,7 @@ public class ManualConverter {
                 return result;
             }
         }
-        if('马' == piece){
+        if('马' == chinesePiece){
             int toJ = redGo? 9-NUMBER_MAP.get(forth) : Integer.parseInt(forth)-1;
             if((third.equals("进") && redGo) || (third.equals("退") && !redGo)){
                 result[0] =  toJ -from[0];
@@ -155,25 +153,28 @@ public class ManualConverter {
         return null;
     }
 
-    private static Integer[] buildFrom(char[][] board, boolean redGo, String move) {
+    private static int[] buildFrom(char[][] board, boolean redGo, String move) {
         String first = String.valueOf(move.charAt(0));
         String second = String.valueOf(move.charAt(1));
         String third = String.valueOf(move.charAt(2));
-        String forth = String.valueOf(move.charAt(3));
         Character piece = null;
 
+        char chinesePiece = ' ';
         if(map.containsKey(first)){
+            chinesePiece = move.charAt(0);
             piece = redGo?Character.toUpperCase(map.get(first)):map.get(first);
         }else{
+            chinesePiece = move.charAt(1);
             piece = redGo?Character.toUpperCase(map.get(second)):map.get(second);
         }
 
-        Integer[] result = new Integer[2];
+        int[] result = new int[2];
         if(map.containsKey(first)){
             //说明是无前后棋子情况 定位初始坐标
             result[0] = redGo? 9-NUMBER_MAP.get(second) : Integer.parseInt(second)-1;
 
-            if('车'==piece || '炮'==piece || '兵'==piece||'卒'==piece || '帅'==piece||'将'==piece){
+            if('车'==chinesePiece || '炮'==chinesePiece || '兵'==chinesePiece||'卒'==chinesePiece
+                    || '帅'==chinesePiece||'将'==chinesePiece||'马' == chinesePiece){
                 for(int i = 0 ;i<10;i++){
                     if(board[i][result[0]] == piece){
                         result[1] = i;
@@ -182,7 +183,7 @@ public class ManualConverter {
                 }
                 return result;
             }
-            if('相'==piece || '仕'==piece || '象'==piece||'士'==piece){
+            if('相'==chinesePiece || '仕'==chinesePiece || '象'==chinesePiece||'士'==chinesePiece){
                 if((third.equals("进") && redGo)|| (third.equals("退")&&!redGo)){
                     for(int i = 9 ;i>=0;i--){
                         if(board[i][result[0]] == piece){
@@ -249,20 +250,5 @@ public class ManualConverter {
         return result;
     }
 
-
-    public static void main(String[] args) {
-
-
-    }
-
-    /**
-     * 获取走棋的棋子
-     * 
-     * @return
-     */
-    private static char getPiece(boolean redGo,String move){
-
-
-    }
 
 }

@@ -513,13 +513,34 @@ public class Controller implements EngineCallBack {
 
     @FXML
     public void pastChessManualClick(ActionEvent e) {
-        fenCode = "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1";
+        String text = ClipboardUtils.getText();
+        String[] array = text.split("\n");
+
+        fenCode = array[0].substring(6,array[0].lastIndexOf("\""));
+        List<String> manualList = new ArrayList<>();
+        for(int i = 1 ; ;i++){
+            String line = array[i];
+            if(line.contains("*")){
+                break;
+            }
+            if(i >= 1000){
+                //避免死循环
+                break;
+            }
+            manualList.add(array[i].substring(array[i].length()-4));
+        }
         newChessBoard(fenCode);
-        moveList.clear();
-        moveList.add("e3e4");
-        moveList.add("e6e5");
-        for(int i = 0;i< moveList.size();i++){
-            recordTable.getItems().add(new ManualRecord(i+1, board.translate(moveList.get(i), false), 0));
+
+        char[][] tempBoard = XiangqiUtils.copyArray(this.board.getBoard());
+
+        boolean tempRedGo = redGo;
+        for(int i = 0;i< manualList.size();i++){
+            String manual = manualList.get(i);
+            String move = ManualConverter.convert(tempBoard, tempRedGo, manual);
+            moveList.add(move);
+            recordTable.getItems().add(new ManualRecord(i+1, manual+"  ", 0));
+            lineChartSeries.getData().add(new XYChart.Data<>(i, 0));
+            tempRedGo = !tempRedGo;
         }
     }
 
