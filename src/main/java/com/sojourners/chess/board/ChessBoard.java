@@ -495,7 +495,7 @@ public class ChessBoard {
     }
 
     /**
-     * 将棋谱转成棋盘标记 如马八进七->h0g2
+     * 将棋谱转成棋盘标记 如马二进三->h0g2
      * @param board 棋盘
      * @param manual 棋谱 如八进七
      * @param redGo 红走还是黑走

@@ -515,7 +515,7 @@ public class Controller implements EngineCallBack {
     public void pastChessManualClick(ActionEvent e) {
         fenCode = "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1";
         newChessBoard(fenCode);
-        moveList = new ArrayList<>();
+        moveList.clear();
         moveList.add("e3e4");
         moveList.add("e6e5");
         for(int i = 0;i< moveList.size();i++){
