@@ -43,4 +43,13 @@ public class PathUtils {
         }
         return false;
     }
+
+    public static boolean isManual(String path) {
+        String[] paths = path.split("\\.");
+        String suffix = paths[paths.length - 1].toLowerCase();
+        if (suffix.equals("pgn")) {
+            return true;
+        }
+        return false;
+    }
 }

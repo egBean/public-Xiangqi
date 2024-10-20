@@ -52,6 +52,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -516,8 +517,7 @@ public class Controller implements EngineCallBack {
     public void pastChessManualClick(ActionEvent e) {
         String text = ClipboardUtils.getText();
         String[] array = text.split("\n");
-
-        fenCode = array[0].substring(6,array[0].lastIndexOf("\""));
+        String tempFenCode = array[0].substring(6, array[0].lastIndexOf("\""));
         List<String> manualList = new ArrayList<>();
         for(int i = 1 ; ;i++){
             String line = array[i];
@@ -530,6 +530,11 @@ public class Controller implements EngineCallBack {
             }
             manualList.add(array[i].substring(array[i].length()-4));
         }
+        dealManualInfo(tempFenCode,manualList);
+    }
+
+    private void dealManualInfo(String fenCode, List<String> manualList) {
+        this.fenCode = fenCode;
         newChessBoard(fenCode);
 
         char[][] tempBoard = XiangqiUtils.copyArray(this.board.getBoard());
@@ -547,6 +552,52 @@ public class Controller implements EngineCallBack {
         //滚动到最末尾
         p = moveList.size();
         browseChessRecord();
+    }
+
+    @FXML
+    public void importManualButtonClick(ActionEvent e) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setInitialDirectory(new File(PathUtils.getJarPath()));
+        File file = fileChooser.showOpenDialog(App.getMainStage());
+        if (file != null) {
+            if (file.exists() && PathUtils.isManual(file.getAbsolutePath())) {
+                List<String> pgnInfoList = new ArrayList<>();
+                try (BufferedReader br = new BufferedReader(new FileReader(file, Charset.forName("GBK")))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        // 处理读取到的每一行
+                        pgnInfoList.add(line);
+                    }
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+                String tempFenCode = null;
+                List<String> manualInfoList = new ArrayList<>();
+                for(int i = 0;i<pgnInfoList.size();i++){
+                    String line = pgnInfoList.get(i);
+                    if(line.contains("*")){
+                        if(line.contains("Result")){
+                            continue;
+                        }else {
+                            break;
+                        }
+
+                    }
+                    if(line.contains("FEN")){
+                        tempFenCode = line.substring(6,line.lastIndexOf("\""));
+                        continue;
+                    }
+                    if(line.contains("进")||line.contains("退")||line.contains("平")){
+                        manualInfoList.add(line.substring(line.lastIndexOf("{")-5,line.lastIndexOf("{")-1));
+                    }
+                }
+                if(StringUtils.isNotEmpty(tempFenCode)){
+                    dealManualInfo(tempFenCode,manualInfoList);
+                }
+
+
+            }
+        }
     }
 
 
@@ -927,6 +978,8 @@ public class Controller implements EngineCallBack {
                 }
                 else if("粘贴棋谱".equals(item.getText())){
                     pastChessManualClick(null);
+                }else if("导入PGN棋谱".equals(item.getText())){
+                    importManualButtonClick(null);
                 }
             }
         });

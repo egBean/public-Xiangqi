@@ -37,6 +37,7 @@
                   <MenuItem mnemonicParsing="false" onAction="#editChessBoardClick" text="编辑局面" />
                   <MenuItem mnemonicParsing="false" onAction="#copyButtonClick" text="复制局面FEN" />
                   <MenuItem mnemonicParsing="false" onAction="#pasteButtonClick" text="粘贴局面FEN" />
+                  <MenuItem mnemonicParsing="false" onAction="#importManualButtonClick" text="导入PGN棋谱" />
                   <MenuItem mnemonicParsing="false" onAction="#exportImageMenuClick" text="局面导出图片" />
                </items>
             </Menu>
