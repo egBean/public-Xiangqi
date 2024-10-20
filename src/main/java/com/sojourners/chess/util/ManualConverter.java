@@ -169,6 +169,49 @@ public class ManualConverter {
         }
 
         int[] result = new int[2];
+
+        if("一".equals(first)||"二".equals(first)||"三".equals(first)||"四".equals(first)||"五".equals(first)){
+            //多兵情况
+            Integer num = NUMBER_MAP.get(first);
+            if(redGo){
+                for(int j = 8;j>=0;j--){
+                    List<Integer> sameIndexList = new ArrayList<>();
+                    for(int i = 0;i<10;i++){
+                        if(piece == board[i][j]){
+                            sameIndexList.add(i);
+                        }
+                    }
+                    if(sameIndexList.size()>1){
+                        if(num <= sameIndexList.size()){
+                            result[0] = j;
+                            result[1] = sameIndexList.get(num - 1);
+                            return result;
+                        }else {
+                            num = num - sameIndexList.size();
+                        }
+                    }
+                }
+            }else {
+                for(int j = 0;j<9;j++){
+                    List<Integer> sameIndexList = new ArrayList<>();
+                    for(int i = 9;i>=0;i--){
+                        if(piece == board[i][j]){
+                            sameIndexList.add(i);
+                        }
+                    }
+                    if(sameIndexList.size()>1){
+                        if(num <= sameIndexList.size()){
+                            result[0] = j;
+                            result[1] = sameIndexList.get(num - 1);
+                            return result;
+                        }else {
+                            num = num - sameIndexList.size();
+                        }
+                    }
+                }
+            }
+        }
+
         if(map.containsKey(first)){
             //说明是无前后棋子情况 定位初始坐标
             result[0] = redGo? 9-NUMBER_MAP.get(second) : Integer.parseInt(second)-1;
