@@ -543,6 +543,9 @@ public class Controller implements EngineCallBack {
             lineChartSeries.getData().add(new XYChart.Data<>(i+1, 0));
             tempRedGo = !tempRedGo;
         }
+        //滚动到最末尾
+        p = moveList.size();
+        browseChessRecord();
     }
 
 
