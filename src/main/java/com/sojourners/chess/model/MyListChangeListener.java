@@ -29,7 +29,7 @@ public class MyListChangeListener implements ListChangeListener<Integer> {
                     ManualRecord newManualRecord = new ManualRecord(originManualRecord.getId(),originManualRecord.getName(),originList.get(t));
                     if(t >= startIndex){
                         if(originList.get(t-1) - originList.get(t) >= 250){
-                            if(originList.get(t-1)>-750 || originList.get(t)<750){
+                            if(!(originList.get(t-1)<-1000 || originList.get(t)> 1000)){
                                 newManualRecord.setDesc("臭棋!");
                             }
                         }
