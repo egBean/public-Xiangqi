@@ -28,16 +28,10 @@ public class MyListChangeListener implements ListChangeListener<Integer> {
                     ManualRecord originManualRecord = this.cb.getRecordTable().getItems().get(t);
                     ManualRecord newManualRecord = new ManualRecord(originManualRecord.getId(),originManualRecord.getName(),originList.get(t));
                     if(t >= startIndex){
-                        if(originList.get(t-1) - originList.get(t) >= 500){
-                            if(t>=2 && originList.get(t-1) - originList.get(t-2)>=500){
-                                newManualRecord.setDesc("错失良机!");
-                            }else{
+                        if(originList.get(t-1) - originList.get(t) >= 250){
+                            if(originList.get(t-1)>-750 || originList.get(t)<750){
                                 newManualRecord.setDesc("臭棋!");
                             }
-                        }else if(originList.get(t-1) - originList.get(t) >= 250){
-                            newManualRecord.setDesc("漏招!");
-                        }else if(t>=2 && originList.get(t-1)-originList.get(t-2)>=500&&Math.abs(originList.get(t-1) - originList.get(t))<100){
-                            newManualRecord.setDesc("捡到勺了!");
                         }
                     }
                     this.cb.getRecordTable().getItems().set(t,newManualRecord);
