@@ -584,7 +584,7 @@ public class Controller implements EngineCallBack {
                 for(int i = 0;i<pgnInfoList.size();i++){
                     String line = pgnInfoList.get(i);
                     if(line.contains("*")){
-                        if(line.contains("Result")){
+                        if(line.contains("[")){
                             continue;
                         }else {
                             break;
