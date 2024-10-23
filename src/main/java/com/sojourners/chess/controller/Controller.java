@@ -459,10 +459,14 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         moveList.add(move);
         p++;
         int score = getScore();
-        recordTable.getItems().add(new ManualRecord(p, board.translate(move, true), score));
+        ManualRecord tmr = recordTable.getItems().get(recordTable.getItems().size() - 1);
+        ManualRecord newTmr = new ManualRecord(tmr.getId(),tmr.getName(),score);
+        recordTable.getItems().remove(recordTable.getItems().size() - 1);
+        recordTable.getItems().add(newTmr);
+        recordTable.getItems().add(new ManualRecord(p, board.translate(move, true), 0));
         reLocationTable();
         // 趋势图
-        lineChartSeries.getData().add(new XYChart.Data<>(p, score > 1000 ? 1000 : (score < -1000 ? -1000 : score)));
+        lineChartSeries.getData().add(new XYChart.Data<>(p-1, score > 1000 ? 1000 : (score < -1000 ? -1000 : score)));
         // 切换行棋方
         redGo = !redGo;
         // 触发引擎走棋
