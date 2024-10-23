@@ -27,6 +27,11 @@ public class Engine {
     private AnalysisModel analysisModel;
     private long analysisValue;
 
+    /**
+     * 最后的分数
+     */
+    private Integer lastScore;
+
     private volatile boolean threadNumChange;
     private int threadNum;
 
@@ -49,6 +54,10 @@ public class Engine {
         INFINITE;
     }
 
+    public Integer getLastScore() {
+        return lastScore;
+    }
+
     public Engine(EngineConfig ec, EngineCallBack cb) throws IOException {
         this.protocol = ec.getProtocol();
         this.cb = cb;
@@ -67,6 +76,10 @@ public class Engine {
                         thinkDetail(line);
                     } else if (line.contains("bestmove")) {
                         bestMove(line);
+                    }else if("info depth 0 score mate 0".equals(line)){
+                        //说明是最后一步
+                        int tmpScore = this.cb.isRedGo()? -30000 : 30000;
+                        this.lastScore = this.cb.isReverse()? -tmpScore:tmpScore;
                     }
                 }
             } catch (Exception e) {
@@ -184,7 +197,9 @@ public class Engine {
         }
         if (Properties.getInstance().getEngineDelayEnd() > 0 && Properties.getInstance().getEngineDelayEnd() >= Properties.getInstance().getEngineDelayStart()) {
             int t = random.nextInt(Properties.getInstance().getEngineDelayStart(), Properties.getInstance().getEngineDelayEnd());
-            sleep(t);
+            if(!AnalysisModel.INFINITE.equals(this.analysisModel) && !this.cb.getReplayFlag()){
+                sleep(t);
+            }
         }
         cb.bestMove(str[1], str.length == 4 ? str[3] : null);
     }
@@ -240,21 +255,26 @@ public class Engine {
             }
         }
         if (td.getDetail().size() > 0) {
+            if(cb.getReplayFlag()){
+                this.lastScore = td.calculateScore(this.cb.isRedGo(),this.cb.isReverse());
+            }
             cb.thinkDetail(td);
         }
     }
 
     public void analysis(String fenCode, List<String> moves, char[][] board, boolean redGo) {
         ExecutorsUtils.getInstance().exec(() -> {
-            if (Properties.getInstance().getBookSwitch()) {
+            if (Properties.getInstance().getBookSwitch() && !cb.getReplayFlag()) {
                 long s = System.currentTimeMillis();
                 List<BookData> results = OpenBookManager.getInstance().queryBook(board, redGo, moves.size() / 2 >= Properties.getInstance().getOffManualSteps());
                 System.out.println("查询库时间" + (System.currentTimeMillis() - s));
                 this.cb.showBookResults(results);
                 if (results.size() > 0 && this.analysisModel != AnalysisModel.INFINITE) {
                     if (Properties.getInstance().getBookDelayEnd() > 0 && Properties.getInstance().getBookDelayEnd() >= Properties.getInstance().getBookDelayStart()) {
-                        int t = random.nextInt(Properties.getInstance().getBookDelayStart(), Properties.getInstance().getBookDelayEnd());
-                        sleep(t);
+                        if(!AnalysisModel.INFINITE.equals(this.analysisModel)){
+                            int t = random.nextInt(Properties.getInstance().getBookDelayStart(), Properties.getInstance().getBookDelayEnd());
+                            sleep(t);
+                        }
                     }
                     this.cb.bestMove(results.get(0).getMove(), null);
                     return;

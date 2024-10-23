@@ -9,10 +9,7 @@ import com.sojourners.chess.linker.*;
 import com.sojourners.chess.lock.SingleLock;
 import com.sojourners.chess.lock.WorkerTask;
 import com.sojourners.chess.menu.BoardContextMenu;
-import com.sojourners.chess.model.BookData;
-import com.sojourners.chess.model.EngineConfig;
-import com.sojourners.chess.model.ManualRecord;
-import com.sojourners.chess.model.ThinkData;
+import com.sojourners.chess.model.*;
 import com.sojourners.chess.openbook.OpenBookManager;
 import com.sojourners.chess.util.*;
 import javafx.application.Platform;
@@ -20,7 +17,9 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -161,6 +160,8 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     private Button bookSwitchButton;
     @FXML
     private Button linkButton;
+    @FXML
+    private Button replayButton;
 
     private String fenCode;
     private List<String> moveList;
@@ -168,12 +169,21 @@ public class Controller implements EngineCallBack, LinkerCallBack {
 
     private SingleLock lock = new SingleLock();
 
+    /**
+     * 第一步是否红先
+     * @return
+     */
+    public boolean firstIsRed(){
+        return fenCode.contains("w");
+    }
+
     @FXML
     private TableView<ManualRecord> recordTable;
 
     @FXML
     private TableView<BookData> bookTable;
 
+    private SimpleObjectProperty<Boolean> replayFlag = new SimpleObjectProperty<>(false);
     private SimpleObjectProperty<Boolean> robotRed = new SimpleObjectProperty<>(false);
     private SimpleObjectProperty<Boolean> robotBlack = new SimpleObjectProperty<>(false);
     private SimpleObjectProperty<Boolean> robotAnalysis = new SimpleObjectProperty<>(false);
@@ -190,6 +200,22 @@ public class Controller implements EngineCallBack, LinkerCallBack {
      * 正在思考（用于连线判断）
      */
     private volatile boolean isThinking;
+
+    public Boolean isReverse() {
+        return isReverse.get();
+    }
+
+    public boolean isRedGo() {
+        return redGo;
+    }
+
+    public XYChart.Series getLineChartSeries(){
+        return lineChartSeries;
+    }
+
+    public Boolean getReplayFlag() {
+        return replayFlag.get();
+    }
 
     @FXML
     public void newButtonClick(ActionEvent event) {
@@ -753,7 +779,65 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         }
     }
 
-    private void initLineChart() {
+    @FXML
+    private void replayButtonClick(ActionEvent e) {
+
+        if (engine == null) {
+            DialogUtils.showWarningDialog("提示", "引擎未加载");
+            return;
+        }
+        if(replayFlag.getValue()){
+            DialogUtils.showWarningDialog("提示", "复盘分析中");
+            return;
+        }
+        engineStop();
+        replayFlag.setValue(true);
+        robotRed.setValue(false);
+        robotBlack.setValue(false);
+        robotAnalysis.setValue(false);
+        ObservableList<Integer> scoreList = FXCollections.observableArrayList();
+        scoreList.addListener(new MyListChangeListener(this, moveList.size()+1));
+
+        ProgressStage.of(App.getMainStage(), new Task<Object>() {
+            @Override
+            protected Object call() throws Exception {
+                try{
+                    for(int i = 0 ;i<= moveList.size();i++){
+                        p = i;
+                        // 设置行棋方
+                        redGo = fenCode.contains("w");
+                        if (p % 2 != 0) {
+                            redGo = !redGo;
+                        }
+                        engine.setThreadNum(prop.getThreadNum());
+                        engine.setHashSize(prop.getHashSize());
+                        long analysisTime = prop.getAnalysisValue()>=1000?prop.getAnalysisValue():1000L;
+                        engine.setAnalysisModel(Engine.AnalysisModel.FIXED_TIME,analysisTime);
+
+                        engine.analysis(fenCode, moveList.subList(0, p), board.getBoard(), redGo);
+                        sleep(analysisTime+200);
+                        Integer lastScore = engine.getLastScore();
+                        scoreList.add(lastScore);
+                    }
+                    replayFlag.setValue(false);
+                }catch (Exception e2){
+                    e2.printStackTrace();
+                    replayFlag.setValue(false);
+                }
+                return null;
+            }
+        },"复盘中").show();
+    }
+
+    private void sleep(long time){
+        try {
+            Thread.sleep(time);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void initLineChart() {
         final NumberAxis xAxis = new NumberAxis();
         final NumberAxis yAxis = new NumberAxis(-1000, 1000, 500);
         xAxis.setTickLabelsVisible(false);
@@ -905,6 +989,8 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         nameCol.setCellValueFactory(new PropertyValueFactory<ManualRecord, String>("name"));
         TableColumn scoreCol = recordTable.getColumns().get(2);
         scoreCol.setCellValueFactory(new PropertyValueFactory<ManualRecord, String>("score"));
+        TableColumn descCol = recordTable.getColumns().get(3);
+        descCol.setCellValueFactory(new PropertyValueFactory<ManualRecord, String>("desc"));
     }
 
     public void initStage() {
@@ -930,7 +1016,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         immediateButton.setTooltip(new Tooltip("立即出招"));
         linkButton.setTooltip(new Tooltip("连线"));
         bookSwitchButton.setTooltip(new Tooltip("启用库招"));
-
+        replayButton.setTooltip(new Tooltip("复盘"));
     }
 
     private void initChessBoard() {
