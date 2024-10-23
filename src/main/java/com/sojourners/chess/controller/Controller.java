@@ -970,8 +970,36 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         this.timeShowLabel.setText(prop.getAnalysisModel() == Engine.AnalysisModel.FIXED_TIME ? "固定时间" + prop.getAnalysisValue() / 1000d + "s" : "固定深度" + prop.getAnalysisValue() + "层");
         this.statusToolBar.setVisible(prop.isLinkShowInfo());
 
-        newChessBoard(null);
+        initDefaultFenCodeList();
+        if(DEFAULT_FEN_CODE_LIST.size()>0){
+            Random random = new Random();
+            int randomIndex = random.nextInt(DEFAULT_FEN_CODE_LIST.size()); // 生成一个随机索引
+            newChessBoard(DEFAULT_FEN_CODE_LIST.get(randomIndex));
+        }else{
+            newChessBoard(null);
+        }
+
     }
+
+    private void initDefaultFenCodeList() {
+        String path = PathUtils.getJarPath() + "/init/fen.txt";
+        File file = new File(path);
+        if (file.exists()) {
+            try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    // 处理读取到的每一行
+                    DEFAULT_FEN_CODE_LIST.add(line);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private List<String> DEFAULT_FEN_CODE_LIST = new ArrayList<>();
+
+
 
     private void initBoardContextMenu() {
         BoardContextMenu.getInstance().setOnAction(new EventHandler<ActionEvent>() {
