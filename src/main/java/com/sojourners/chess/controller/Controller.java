@@ -20,6 +20,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -48,12 +49,16 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 
 public class Controller implements EngineCallBack, LinkerCallBack {
 
@@ -566,6 +571,47 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     }
 
     @FXML
+    public void pastChessManualClick(ActionEvent e) {
+        String text = ClipboardUtils.getText();
+        String[] array = text.split("\n");
+        String tempFenCode = array[0].substring(6, array[0].lastIndexOf("\""));
+        List<String> manualList = new ArrayList<>();
+        for(int i = 1 ; ;i++){
+            String line = array[i];
+            if(line.contains("*")){
+                break;
+            }
+            if(i >= 1000){
+                //避免死循环
+                break;
+            }
+            manualList.add(array[i].substring(array[i].length()-4));
+        }
+        dealManualInfo(tempFenCode,manualList);
+    }
+
+    private void dealManualInfo(String fenCode, List<String> manualList) {
+        this.fenCode = fenCode;
+        newChessBoard(fenCode);
+
+        char[][] tempBoard = XiangqiUtils.copyArray(this.board.getBoard());
+
+        boolean tempRedGo = redGo;
+        lineChartSeries.getData().add(new XYChart.Data<>(0, 0));
+        for(int i = 0;i< manualList.size();i++){
+            String manual = manualList.get(i);
+            String move = ManualConverter.convert(tempBoard, tempRedGo, manual);
+            moveList.add(move);
+            recordTable.getItems().add(new ManualRecord(i+1, manual+"  ", 0));
+            lineChartSeries.getData().add(new XYChart.Data<>(i+1, 0));
+            tempRedGo = !tempRedGo;
+        }
+        //滚动到最末尾
+        p = moveList.size();
+        browseChessRecord();
+    }
+
+    @FXML
     public void importImageMenuClick(ActionEvent e) {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setInitialDirectory(new File(PathUtils.getJarPath()));
@@ -589,6 +635,52 @@ public class Controller implements EngineCallBack, LinkerCallBack {
                 ImageIO.write(renderedImage, "png", file);
             } catch (IOException ex) {
                 ex.printStackTrace();
+            }
+        }
+    }
+
+    @FXML
+    public void importManualButtonClick(ActionEvent e) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setInitialDirectory(new File(PathUtils.getJarPath()));
+        File file = fileChooser.showOpenDialog(App.getMainStage());
+        if (file != null) {
+            if (file.exists() && PathUtils.isManual(file.getAbsolutePath())) {
+                List<String> pgnInfoList = new ArrayList<>();
+                try (BufferedReader br = new BufferedReader(new FileReader(file, Charset.forName("GBK")))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        // 处理读取到的每一行
+                        pgnInfoList.add(line);
+                    }
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+                String tempFenCode = null;
+                List<String> manualInfoList = new ArrayList<>();
+                for(int i = 0;i<pgnInfoList.size();i++){
+                    String line = pgnInfoList.get(i);
+                    if(line.contains("*")){
+                        if(line.contains("[")){
+                            continue;
+                        }else {
+                            break;
+                        }
+
+                    }
+                    if(line.contains("FEN")){
+                        tempFenCode = line.substring(6,line.lastIndexOf("\""));
+                        continue;
+                    }
+                    if(line.contains("进")||line.contains("退")||line.contains("平")){
+                        manualInfoList.add(line.substring(line.lastIndexOf("{")-5,line.lastIndexOf("{")-1));
+                    }
+                }
+                if(StringUtils.isNotEmpty(tempFenCode)){
+                    dealManualInfo(tempFenCode,manualInfoList);
+                }
+
+
             }
         }
     }
@@ -737,6 +829,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         initCanvasDragListener();
 
         useOpenBook.setValue(prop.getBookSwitch());
+        initCacheConsumer();
     }
 
     private void importFromBufferImage(BufferedImage img) {
@@ -897,9 +990,42 @@ public class Controller implements EngineCallBack, LinkerCallBack {
                     copyImageMenuClick(null);
                 } else if ("粘贴局面图片".equals(item.getText())) {
                     pasteImageMenuClick(null);
+                }else if("复制棋谱".equals(item.getText())){
+                    copyChessManualClick(null);
+                }
+                else if("粘贴棋谱".equals(item.getText())){
+                    pastChessManualClick(null);
+                }else if("导入PGN棋谱".equals(item.getText())){
+                    importManualButtonClick(null);
                 }
             }
         });
+    }
+    public TableView<ManualRecord> getRecordTable(){
+        return recordTable;
+    }
+
+    @FXML
+    public void copyChessManualClick(ActionEvent e) {
+        String fenCode = this.fenCode;
+        StringBuilder result = new StringBuilder("[FEN "+"\"" + fenCode +"\"]\n");
+        //拿到所有棋谱
+        ObservableList<ManualRecord> itemList = this.getRecordTable().getItems();
+        int count = 1;
+        for (int i = 1;i<itemList.size();i++){
+            String name = itemList.get(i).getName();
+            name = name.substring(0,name.length()-2);
+            if(i%2 == 1){
+                result.append("  ").append(count).append(". ").append(name).append("\n");
+                continue;
+            }
+            result.append("     ").append(name).append("\n");
+            count++;
+
+        }
+        result.append("  *\n");
+        result.append("感谢使用t-chess");
+        ClipboardUtils.setText(result.toString());
     }
 
     @FXML
@@ -1183,25 +1309,49 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         }
     }
 
+    /**
+     * 做个缓冲 避免界面卡顿
+     */
+    private final ArrayBlockingQueue<ThinkData> CACHE_TD_QUEUE = new ArrayBlockingQueue<>(10);
+
+    private void initCacheConsumer(){
+        Thread thread = new Thread(() -> {
+            while (true) {
+                try {
+                    ThinkData td = CACHE_TD_QUEUE.take();
+                    Platform.runLater(() -> {
+                        listView.getItems().add(0, td);
+                        if (listView.getItems().size() > 10) {
+                            listView.getItems().remove(listView.getItems().size() - 1);
+                        }
+
+                        if (prop.isLinkShowInfo()) {
+                            infoShowLabel.setText(td.getTitle() + " | " + td.getBody());
+                            infoShowLabel.setTextFill(td.getScore() >= 0 ? Color.BLUE : Color.RED);
+                            timeShowLabel.setText(prop.getAnalysisModel() == Engine.AnalysisModel.FIXED_TIME ? "固定时间" + prop.getAnalysisValue() / 1000d + "s" : "固定深度" + prop.getAnalysisValue() + "层");
+                        }
+
+                        board.setTip(td.getDetail().get(0), td.getDetail().size() > 1 ? td.getDetail().get(1) : null);
+                    });
+                    Thread.sleep(100L);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
+    }
+
     @Override
     public void thinkDetail(ThinkData td) {
         if (redGo && robotRed.getValue() || !redGo && robotBlack.getValue() || robotAnalysis.getValue()) {
             td.generate(redGo, isReverse.getValue(), board);
             if (td.getValid()) {
-                Platform.runLater(() -> {
-                    listView.getItems().add(0, td);
-                    if (listView.getItems().size() > 128) {
-                        listView.getItems().remove(listView.getItems().size() - 1);
-                    }
-
-                    if (prop.isLinkShowInfo()) {
-                        infoShowLabel.setText(td.getTitle() + " | " + td.getBody());
-                        infoShowLabel.setTextFill(td.getScore() >= 0 ? Color.BLUE : Color.RED);
-                        timeShowLabel.setText(prop.getAnalysisModel() == Engine.AnalysisModel.FIXED_TIME ? "固定时间" + prop.getAnalysisValue() / 1000d + "s" : "固定深度" + prop.getAnalysisValue() + "层");
-                    }
-
-                    board.setTip(td.getDetail().get(0), td.getDetail().size() > 1 ? td.getDetail().get(1) : null);
-                });
+                if (!CACHE_TD_QUEUE.offer(td)) {
+                    CACHE_TD_QUEUE.poll();
+                    CACHE_TD_QUEUE.offer(td);
+                }
             }
         }
     }
