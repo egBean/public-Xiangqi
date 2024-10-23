@@ -1,16 +1,2 @@
 /out/artifacts/Xiangqi_jar2/Xiangqi.jar
-/target/classes/com/sojourners/chess/controller/LinkSettingController.class
-/target/classes/com/sojourners/chess/linker/AbstractGraphLinker$Action.class
-/target/classes/com/sojourners/chess/linker/AbstractGraphLinker.class
-/target/classes/com/sojourners/chess/linker/GraphLinker.class
-/target/classes/com/sojourners/chess/linker/LinkerCallBack.class
-/target/classes/com/sojourners/chess/linker/LinuxGraphLinker.class
-/target/classes/com/sojourners/chess/linker/MacosGraphLinker.class
-/target/classes/com/sojourners/chess/linker/WindowsGraphLinker.class
-/target/classes/com/sojourners/chess/util/ManualConverter.class
-/target/classes/com/sojourners/chess/yolo/OnnxModel.class
-/target/classes/com/sojourners/chess/yolo/Yolo5Model$DetectResult.class
-/target/classes/com/sojourners/chess/yolo/Yolo5Model$Rectangle.class
-/target/classes/com/sojourners/chess/yolo/Yolo5Model.class
-/target/classes/com/sojourners/chess/yolo/Yolo11Model.class
-/target/classes/model/yolov11.onnx
+/target/**
