@@ -691,20 +691,23 @@ public class Controller implements EngineCallBack, LinkerCallBack {
                 List<String> manualInfoList = new ArrayList<>();
                 for(int i = 0;i<pgnInfoList.size();i++){
                     String line = pgnInfoList.get(i);
-                    if(line.contains("*")){
-                        if(line.contains("[")){
-                            continue;
-                        }else {
-                            break;
-                        }
-
-                    }
                     if(line.contains("FEN")){
                         tempFenCode = line.substring(6,line.lastIndexOf("\""));
                         continue;
                     }
-                    if(line.contains("进")||line.contains("退")||line.contains("平")){
-                        manualInfoList.add(line.substring(line.lastIndexOf("{")-5,line.lastIndexOf("{")-1));
+                    if(line.contains("[")){
+                        continue;
+                    }
+                    if(line.contains("*")){
+                        break;
+                    }
+                    if(StringUtils.isNotEmpty(line)){
+                        String[] split = line.split(" ");
+                        for(String manual : split){
+                            if(manual.contains("进")||manual.contains("退")||manual.contains("平")){
+                                manualInfoList.add(manual);
+                            }
+                        }
                     }
                 }
                 if(StringUtils.isNotEmpty(tempFenCode)){
