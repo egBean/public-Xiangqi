@@ -116,7 +116,7 @@ public abstract class BaseBoardRender implements BoardRender {
         Rotate r = new Rotate(angle, x1, y1);
         gc.setTransform(r.getMxx(), r.getMyx(), r.getMxy(), r.getMyy(), r.getTx(), r.getTy());
 
-        gc.setGlobalAlpha(0.5);
+        gc.setGlobalAlpha(0.8);
         Color color = isFirst ? Color.SPRINGGREEN : Color.YELLOW;
         gc.setFill(color);
 
