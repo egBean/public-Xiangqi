@@ -48,10 +48,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -652,6 +649,29 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         }
     }
 
+
+    @FXML
+    public void exportManualMenuClick(ActionEvent e) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setInitialDirectory(new File(PathUtils.getJarPath()));
+        fileChooser.setInitialFileName("tchess_export_" + DateUtils.getDateTimeString(new Date()) + ".pgn");
+        File file = fileChooser.showSaveDialog(App.getMainStage());
+        if (file != null) {
+            try (Writer writer = new OutputStreamWriter(new FileOutputStream(file),"GBK")) {
+                String result = "[Game \"Chinese Chess\"]\r\n" +
+                        "[Event \"*\"]\r\n" +
+                        "[Date \"*\"]\r\n" +
+                        "[Red \"*\"]\r\n" +
+                        "[Black \"*\"]\r\n" +
+                        "[Result \"*\"]"+"\r\n";
+                result = result + buildManual();
+                writer.write(result);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
     @FXML
     public void exportImageMenuClick(ActionEvent e) {
         FileChooser fileChooser = new FileChooser();
@@ -1119,6 +1139,8 @@ public class Controller implements EngineCallBack, LinkerCallBack {
                     pastChessManualClick(null);
                 }else if("导入PGN棋谱".equals(item.getText())){
                     importManualButtonClick(null);
+                }else if("导出PGN棋谱".equals(item.getText())){
+                    exportManualMenuClick(null);
                 }
             }
         });
@@ -1129,6 +1151,16 @@ public class Controller implements EngineCallBack, LinkerCallBack {
 
     @FXML
     public void copyChessManualClick(ActionEvent e) {
+        String result = buildManual();
+        ClipboardUtils.setText(result.toString());
+    }
+
+    /**
+     * 构建棋谱
+     *
+     * @return str
+     */
+    private String buildManual() {
         String fenCode = this.fenCode;
         StringBuilder result = new StringBuilder("[FEN "+"\"" + fenCode +"\"]\n");
         //拿到所有棋谱
@@ -1147,7 +1179,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         }
         result.append("  *\n");
         result.append("感谢使用t-chess");
-        ClipboardUtils.setText(result.toString());
+        return result.toString();
     }
 
     @FXML

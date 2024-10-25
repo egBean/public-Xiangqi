@@ -36,7 +36,7 @@ public class BoardContextMenu extends ContextMenu {
         MenuItem importChessManualMenuItem = new MenuItem("导入PGN棋谱");
         MenuItem exportChessManualMenuItem = new MenuItem("导出PGN棋谱");
         getItems().addAll(importChessManualMenuItem);
-//        getItems().addAll(exportChessManualMenuItem);
+        getItems().addAll(exportChessManualMenuItem);
         getItems().add(new SeparatorMenuItem());
 
         Menu timeMenu = new Menu("对局时间");
