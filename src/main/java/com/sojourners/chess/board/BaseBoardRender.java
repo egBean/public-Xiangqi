@@ -209,7 +209,7 @@ public abstract class BaseBoardRender implements BoardRender {
         // 绘制线路序号
         double numberSize = getNumberSize(style);
         gc.setFont(Font.font(numberSize));
-        gc.setFill(Color.BLACK);
+        gc.setFill(Color.AZURE);
         for (int i = 0; i < 9; i++) {
             // 黑方
             char number = (char) ('１' + i);

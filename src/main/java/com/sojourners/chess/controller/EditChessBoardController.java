@@ -107,6 +107,8 @@ public class EditChessBoardController {
                 board[i][j] = ' ';
             }
         }
+        board[0][4] = 'k';
+        board[9][4] = 'K';
         paint();
     }
 
