@@ -117,7 +117,7 @@ public abstract class BaseBoardRender implements BoardRender {
         gc.setTransform(r.getMxx(), r.getMyx(), r.getMxy(), r.getMyy(), r.getTx(), r.getTy());
 
         gc.setGlobalAlpha(0.5);
-        Color color = isFirst ? Color.PURPLE : Color.GREEN;
+        Color color = isFirst ? Color.SPRINGGREEN : Color.YELLOW;
         gc.setFill(color);
 
         int len = (int) MathUtils.calculateDistance(x1, y1, x2, y2);
