@@ -6,6 +6,17 @@ import java.util.Map;
 public class XiangqiUtils {
 
 
+    public static boolean isRedGo(String fenCode){
+        if(StringUtils.isEmpty(fenCode)){
+            return true;
+        }
+        if(!fenCode.contains(" ")){
+            return true;
+        }
+        return fenCode.contains("w");
+    }
+
+
     public static boolean canGo(char[][] board, int x1, int y1, int x2, int y2) {
         if (board[x1][y1] == ' ' || board[x2][y2] != ' ' && isRed(board[x1][y1]) == isRed(board[x2][y2])) {
             return false;

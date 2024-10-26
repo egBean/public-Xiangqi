@@ -2,6 +2,7 @@ package com.sojourners.chess.model;
 
 import com.sojourners.chess.controller.Controller;
 import com.sojourners.chess.util.DialogUtils;
+import com.sojourners.chess.util.XiangqiUtils;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -21,7 +22,7 @@ public class MyListChangeListener implements ListChangeListener<Integer> {
     public void onChanged(Change<? extends Integer> change) {
         ObservableList<? extends Integer> originList = change.getList();
         if(originList.size() >= flag){
-            final int startIndex = (!this.cb.isReverse()&&this.cb.firstIsRed())||(this.cb.isReverse()&&!this.cb.firstIsRed())?1 :2;
+            final int startIndex = (!this.cb.isReverse()&& XiangqiUtils.isRedGo(this.cb.getFenCode()))||(this.cb.isReverse()&&!XiangqiUtils.isRedGo(this.cb.getFenCode()))?1 :2;
             for(int i = 0 ;i< originList.size();i++){
                 int t = i;
                 Platform.runLater(() -> {

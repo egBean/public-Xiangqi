@@ -161,18 +161,15 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     private Button replayButton;
 
     private String fenCode;
+
+    public String getFenCode() {
+        return fenCode;
+    }
+
     private List<String> moveList;
     private int p;
 
     private SingleLock lock = new SingleLock();
-
-    /**
-     * 第一步是否红先
-     * @return
-     */
-    public boolean firstIsRed(){
-        return fenCode.contains("w");
-    }
 
     @FXML
     private TableView<ManualRecord> recordTable;
@@ -496,7 +493,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         // 定位table滚动条
         reLocationTable();
         // 设置行棋方
-        redGo = fenCode.contains("w");
+        redGo = XiangqiUtils.isRedGo(this.getFenCode());
         if (p % 2 != 0) {
             redGo = !redGo;
         }
@@ -832,7 +829,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
                     for(int i = 0 ;i<= moveList.size();i++){
                         p = i;
                         // 设置行棋方
-                        redGo = fenCode.contains("w");
+                        redGo = XiangqiUtils.isRedGo(fenCode);
                         if (p % 2 != 0) {
                             redGo = !redGo;
                         }
@@ -1239,7 +1236,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         // 绘制棋盘
         board = new ChessBoard(this.canvas, prop.getBoardSize(), prop.getBoardStyle(), prop.isStepTip(), prop.isStepSound(), prop.isShowNumber(), fenCode);
         // 设置局面
-        redGo = StringUtils.isEmpty(fenCode) ? true : fenCode.contains("w");
+        redGo = XiangqiUtils.isRedGo(fenCode);
         this.fenCode = board.fenCode(redGo);
         moveList = new ArrayList<>();
         // 设置棋谱
