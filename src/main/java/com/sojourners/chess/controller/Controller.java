@@ -1264,7 +1264,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         for (int i = 1; i <= Runtime.getRuntime().availableProcessors(); i++) {
             threadComboBox.getItems().add(String.valueOf(i));
         }
-        hashComboBox.getItems().addAll("16", "32", "64", "128", "256", "512", "1024", "2048", "4096");
+        hashComboBox.getItems().addAll("128", "256", "512", "1024", "2048", "4096");
         // 加载设置
         threadComboBox.setValue(String.valueOf(prop.getThreadNum()));
         hashComboBox.setValue(String.valueOf(prop.getHashSize()));
@@ -1463,7 +1463,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     /**
      * 做个缓冲 避免界面卡顿
      */
-    private final ArrayBlockingQueue<ThinkData> CACHE_TD_QUEUE = new ArrayBlockingQueue<>(10);
+    private final ArrayBlockingQueue<ThinkData> CACHE_TD_QUEUE = new ArrayBlockingQueue<>(8);
 
     private void initCacheConsumer(){
         Thread thread = new Thread(() -> {
@@ -1472,7 +1472,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
                     ThinkData td = CACHE_TD_QUEUE.take();
                     Platform.runLater(() -> {
                         listView.getItems().add(0, td);
-                        if (listView.getItems().size() > 10) {
+                        if (listView.getItems().size() > 8) {
                             listView.getItems().remove(listView.getItems().size() - 1);
                         }
 
