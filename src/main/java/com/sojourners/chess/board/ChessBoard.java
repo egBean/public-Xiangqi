@@ -15,9 +15,9 @@ public class ChessBoard {
 
     private static BaseBoardRender boardRender;
 
-    private static volatile char[][] board = new char[10][9];
+    private static final char[][] board = new char[10][9];
 
-    private static char[][] copyBoard = new char[10][9];
+    private static final char[][] copyBoard = new char[10][9];
 
     private static final String[] THREE_P= new String[]{"前","中","后"};
     private static final String[] FOUR_AND_FIVE_P= new String[]{"一","二","三","四","五"};
@@ -467,7 +467,7 @@ public class ChessBoard {
      */
     public String translate(String move, boolean hasGo) {
         StringBuilder sb = new StringBuilder();
-        translateStep(this.board, sb, move, hasGo);
+        translateStep(ChessBoard.board, sb, move, hasGo,false);
         return sb.toString();
     }
 
@@ -484,7 +484,7 @@ public class ChessBoard {
         }
         StringBuilder sb = new StringBuilder();
         for (String move : moveList) {
-            translateStep(copyBoard, sb, move, false);
+            translateStep(ChessBoard.copyBoard, sb, move, false,true);
         }
         sb.delete(sb.length() - 2, sb.length());
         return sb.toString();
@@ -494,7 +494,7 @@ public class ChessBoard {
         return this.board;
     }
 
-    private void translateStep(char[][] board, StringBuilder sb, String move, boolean hasGo) {
+    private void translateStep(char[][] board, StringBuilder sb, String move, boolean hasGo,boolean isCopyBoard) {
         if (StringUtils.isEmpty(move) || move.length() < 4) {
             sb.append(move);
             return;
@@ -536,8 +536,12 @@ public class ChessBoard {
             sb.append(isRed ? map.get(pos) : pos);
         }
         sb.append("  ");
-        copyBoard[toI][toJ] = copyBoard[fromI][fromJ];
-        copyBoard[fromI][fromJ] = ' ';
+
+        //copyBoard是用来翻译引擎招法细节的
+        if(isCopyBoard){
+            board[toI][toJ] = board[fromI][fromJ];
+            board[fromI][fromJ] = ' ';
+        }
     }
 
     /**
@@ -559,7 +563,7 @@ public class ChessBoard {
             return "";
         }
         //拿到列的重复棋子序号
-        List<Integer> samePieceIndexList = querySamePieceIndexList(piece,hasGo,toI,toJ,fromI,fromJ);
+        List<Integer> samePieceIndexList = querySamePieceIndexList(piece,hasGo,toI,toJ,fromI,fromJ,board);
         if(samePieceIndexList.size() <= 1){
             return "";
         }
@@ -628,7 +632,7 @@ public class ChessBoard {
         return FOUR_AND_FIVE_P[count]+ map.get(piece);
     }
 
-    private List<Integer> querySamePieceIndexList(char piece,boolean hasGo, int toI, int toJ, int fromI, int fromJ) {
+    private List<Integer> querySamePieceIndexList(char piece,boolean hasGo, int toI, int toJ, int fromI, int fromJ,char[][] board) {
         List<Integer> samePieceIndexList = new ArrayList<>();
         if(!hasGo){
             //没有走棋
