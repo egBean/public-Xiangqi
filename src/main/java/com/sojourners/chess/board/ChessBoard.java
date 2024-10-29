@@ -504,7 +504,7 @@ public class ChessBoard {
         int fromJ = a - 'a', toJ = c - 'a';
         boolean isRed = XiangqiUtils.isRed(hasGo ? board[toI][toJ] : board[fromI][fromJ]);
         //获取前两步的描述
-        String specialFirstAndSecondStep = buildSpecialFirstAndSecondStep(hasGo,toI,toJ,fromI,fromJ,isRed);
+        String specialFirstAndSecondStep = buildSpecialFirstAndSecondStep(board,hasGo,toI,toJ,fromI,fromJ,isRed);
 
         char pos = getPos(fromJ, isRed);
         if(StringUtils.isEmpty(specialFirstAndSecondStep)){
@@ -551,7 +551,7 @@ public class ChessBoard {
      * @param isRed 是否红棋走
      * @return specialFirstAndSecondStep
      */
-    private String buildSpecialFirstAndSecondStep(boolean hasGo,int toI,int toJ,int fromI,int fromJ,boolean isRed) {
+    private String buildSpecialFirstAndSecondStep(char[][] board,boolean hasGo,int toI,int toJ,int fromI,int fromJ,boolean isRed) {
         //针对棋盘上同时存在前后的情况进行处理 马八进九 h0g2
         char piece = hasGo?board[toI][toJ] : board[fromI][fromJ];
         //士象不特殊处理
