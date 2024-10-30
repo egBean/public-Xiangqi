@@ -942,6 +942,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
 
         useOpenBook.setValue(prop.getBookSwitch());
         initCacheConsumer();
+        initMusic();
     }
 
     private void importFromBufferImage(BufferedImage img) {
@@ -1085,7 +1086,6 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         this.statusToolBar.setVisible(prop.isLinkShowInfo());
 
         initDefaultFenCodeList();
-        initMusic();
         if(DEFAULT_FEN_CODE_LIST.size()>0){
             Random random = new Random();
             int randomIndex = random.nextInt(DEFAULT_FEN_CODE_LIST.size()); // 生成一个随机索引
@@ -1096,28 +1096,55 @@ public class Controller implements EngineCallBack, LinkerCallBack {
 
     }
 
+    private MediaPlayer mediaPlayer;
+
+    private final List<File> songs = new ArrayList<>();
+
     private void initMusic() {
+        File musicDir = new File(PathUtils.getJarPath() + "music");
+        String[] musicList = musicDir.list();
+        if(musicList == null || musicList.length == 0){
+            return;
+        }
+        for (String musicName : musicList) {
+            songs.add(new File(PathUtils.getJarPath() + "music/" + musicName));
+        }
+
+        Random random = new Random();
+        File randomSong = songs.get(random.nextInt(songs.size()));
+        Media media = new Media(randomSong.toURI().toString());
+        mediaPlayer = new MediaPlayer(media);
+        mediaPlayer.setAutoPlay(true);
+        mediaPlayer.setOnEndOfMedia(this::playRandomSong);
 
         // 音乐文件路径
-        String musicFilePath = PathUtils.getJarPath() + "music/default.mp3";;
+//        String musicFilePath = PathUtils.getJarPath() + "music/gaoshanliushui.mp3";;
+//
+//        File file = new java.io.File(musicFilePath);//文件相对路径
+//        String url = null;
+//        try {
+//            url = file.toURL().toString();
+//        } catch (MalformedURLException e) {
+//            throw new RuntimeException(e);
+//        }
+//        // 创建媒体对象
+//        Media music = new Media(url);
+//
+//        // 创建媒体播放器
+//        mediaPlayer = new MediaPlayer(music);
+//
+//        // 循环播放
+//        mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
+//
+//        // 播放音乐
+//        mediaPlayer.play();
+    }
 
-        File file = new java.io.File(musicFilePath);//文件相对路径
-        String url = null;
-        try {
-            url = file.toURL().toString();
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
-        // 创建媒体对象
-        Media music = new Media(url);
-
-        // 创建媒体播放器
-        MediaPlayer mediaPlayer = new MediaPlayer(music);
-
-        // 循环播放
-        mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
-
-        // 播放音乐
+    private void playRandomSong() {
+        Random random = new Random();
+        File randomSongFile = songs.get(random.nextInt(songs.size()));
+        Media randomSong = new Media(randomSongFile.toURI().toString());
+        mediaPlayer = new MediaPlayer(randomSong);
         mediaPlayer.play();
     }
 
