@@ -40,6 +40,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.util.Callback;
@@ -49,6 +51,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 import java.io.*;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -1082,6 +1085,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         this.statusToolBar.setVisible(prop.isLinkShowInfo());
 
         initDefaultFenCodeList();
+        initMusic();
         if(DEFAULT_FEN_CODE_LIST.size()>0){
             Random random = new Random();
             int randomIndex = random.nextInt(DEFAULT_FEN_CODE_LIST.size()); // 生成一个随机索引
@@ -1090,6 +1094,31 @@ public class Controller implements EngineCallBack, LinkerCallBack {
             newChessBoard(null);
         }
 
+    }
+
+    private void initMusic() {
+
+        // 音乐文件路径
+        String musicFilePath = PathUtils.getJarPath() + "music/default.mp3";;
+
+        File file = new java.io.File(musicFilePath);//文件相对路径
+        String url = null;
+        try {
+            url = file.toURL().toString();
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+        // 创建媒体对象
+        Media music = new Media(url);
+
+        // 创建媒体播放器
+        MediaPlayer mediaPlayer = new MediaPlayer(music);
+
+        // 循环播放
+        mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
+
+        // 播放音乐
+        mediaPlayer.play();
     }
 
     private void initDefaultFenCodeList() {
