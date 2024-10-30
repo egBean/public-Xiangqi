@@ -1145,6 +1145,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         File randomSongFile = songs.get(random.nextInt(songs.size()));
         Media randomSong = new Media(randomSongFile.toURI().toString());
         mediaPlayer = new MediaPlayer(randomSong);
+        mediaPlayer.setOnEndOfMedia(this::playRandomSong);
         mediaPlayer.play();
     }
 
