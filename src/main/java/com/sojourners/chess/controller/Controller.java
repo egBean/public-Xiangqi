@@ -114,6 +114,8 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     @FXML
     private CheckMenuItem menuOfStepSound;
     @FXML
+    private CheckMenuItem menuOfBackSound;
+    @FXML
     private CheckMenuItem menuOfLinkBackMode;
     @FXML
     private CheckMenuItem menuOfLinkAnimation;
@@ -258,6 +260,19 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         CheckMenuItem item = (CheckMenuItem) event.getTarget();
         prop.setStepTip(item.isSelected());
         board.setStepTip(prop.isStepTip());
+    }
+
+    @FXML
+    void backSoundClick(ActionEvent event) {
+        CheckMenuItem item = (CheckMenuItem) event.getTarget();
+        prop.setBackSound(item.isSelected());
+        if(prop.isBackSound()){
+            if(this.mediaPlayer != null){
+                this.mediaPlayer.play();
+            }
+        }else{
+            this.mediaPlayer.stop();
+        }
     }
 
     @FXML
@@ -1101,6 +1116,9 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     private final List<File> songs = new ArrayList<>();
 
     private void initMusic() {
+        // 背景音乐选择按钮
+        menuOfBackSound.setSelected(prop.isBackSound());
+
         File musicDir = new File(PathUtils.getJarPath() + "music");
         String[] musicList = musicDir.list();
         if(musicList == null || musicList.length == 0){
@@ -1114,8 +1132,10 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         File randomSong = songs.get(random.nextInt(songs.size()));
         Media media = new Media(randomSong.toURI().toString());
         mediaPlayer = new MediaPlayer(media);
-        mediaPlayer.setAutoPlay(true);
         mediaPlayer.setOnEndOfMedia(this::playRandomSong);
+        if(menuOfBackSound.isSelected()){
+            mediaPlayer.play();
+        }
 
         // 音乐文件路径
 //        String musicFilePath = PathUtils.getJarPath() + "music/gaoshanliushui.mp3";;

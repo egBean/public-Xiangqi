@@ -24,6 +24,16 @@ public class Properties implements Serializable {
 
     private boolean stepSound;
 
+    private boolean backSound;
+
+    public boolean isBackSound() {
+        return backSound;
+    }
+
+    public void setBackSound(boolean backSound) {
+        this.backSound = backSound;
+    }
+
     private boolean showNumber = true;
 
     private boolean topWindow = false;

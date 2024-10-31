@@ -66,6 +66,7 @@
             <items>
                   <CheckMenuItem fx:id="menuOfStepTip" mnemonicParsing="false" onAction="#stepTipChecked" text="棋步提示" />
                   <CheckMenuItem fx:id="menuOfStepSound" mnemonicParsing="false" onAction="#stepSoundClick" text="走棋音效" />
+                <CheckMenuItem fx:id="menuOfBackSound" mnemonicParsing="false" onAction="#backSoundClick" text="背景音乐" />
                   <CheckMenuItem fx:id="menuOfShowNumber" mnemonicParsing="false" onAction="#showNumberClick" text="显示线路" />
                   <CheckMenuItem fx:id="menuOfTopWindow" mnemonicParsing="false" onAction="#topWindowClick" text="窗口置顶" />
                   <CheckMenuItem fx:id="menuOfShowStatus" mnemonicParsing="false" onAction="#showStatusBarClick" text="显示状态栏" />
