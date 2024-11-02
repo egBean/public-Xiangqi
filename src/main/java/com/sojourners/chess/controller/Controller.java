@@ -182,6 +182,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     @FXML
     private TableView<BookData> bookTable;
 
+
     private SimpleObjectProperty<Boolean> replayFlag = new SimpleObjectProperty<>(false);
     private SimpleObjectProperty<Boolean> robotRed = new SimpleObjectProperty<>(false);
     private SimpleObjectProperty<Boolean> robotBlack = new SimpleObjectProperty<>(false);
