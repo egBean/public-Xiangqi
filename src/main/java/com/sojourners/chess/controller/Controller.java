@@ -493,7 +493,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
 
     private void updateP(Integer p,boolean queryBook){
         this.p = p;
-        if(queryBook){
+        if(queryBook&& Properties.getInstance().getBookSwitch()){
             ExecutorsUtils.getInstance().execTwo(this::queryAndShowBookResults);
         }
     }
