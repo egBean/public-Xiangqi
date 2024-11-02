@@ -271,10 +271,8 @@ public class Engine {
                 this.cb.showBookResults(results);
                 if (results.size() > 0 && this.analysisModel != AnalysisModel.INFINITE) {
                     if (Properties.getInstance().getBookDelayEnd() > 0 && Properties.getInstance().getBookDelayEnd() >= Properties.getInstance().getBookDelayStart()) {
-                        if(!AnalysisModel.INFINITE.equals(this.analysisModel)){
-                            int t = random.nextInt(Properties.getInstance().getBookDelayStart(), Properties.getInstance().getBookDelayEnd());
-                            sleep(t);
-                        }
+                        int t = random.nextInt(Properties.getInstance().getBookDelayStart(), Properties.getInstance().getBookDelayEnd());
+                        sleep(t);
                     }
                     this.cb.bestMove(results.get(0).getMove(), null);
                     return;
