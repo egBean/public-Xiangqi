@@ -213,7 +213,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     }
 
     public Boolean getReplayFlag() {
-        return replayFlag.get();
+        return replayFlag.getValue();
     }
 
     @FXML
@@ -222,7 +222,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
             stopGraphLink();
         }
 
-        newChessBoard(null);
+        newChessBoard(null,true);
     }
 
     @FXML
@@ -469,7 +469,11 @@ public class Controller implements EngineCallBack, LinkerCallBack {
             }
         }
         moveList.add(move);
-        p++;
+
+        // 切换行棋方
+        redGo = !redGo;
+        updateP(p+1,true);
+
         int score = getScore();
         ManualRecord tmr = recordTable.getItems().get(recordTable.getItems().size() - 1);
         ManualRecord newTmr = new ManualRecord(tmr.getId(),tmr.getName(),score);
@@ -479,13 +483,18 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         reLocationTable();
         // 趋势图
         lineChartSeries.getData().add(new XYChart.Data<>(p-1, score > 1000 ? 1000 : (score < -1000 ? -1000 : score)));
-        // 切换行棋方
-        redGo = !redGo;
         // 触发引擎走棋
         if (redGo && robotRed.getValue() || !redGo && robotBlack.getValue() || robotAnalysis.getValue()) {
             engineGo();
         }
 
+    }
+
+    private void updateP(Integer p,boolean queryBook){
+        this.p = p;
+        if(queryBook){
+            queryAndShowBookResults();
+        }
     }
     private int getScore() {
         if (listView.getItems().size() <= 0)
@@ -505,16 +514,18 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         recordTable.scrollTo(p);
     }
 
-    private void browseChessRecord() {
-        // 棋盘
-        board.browseChessRecord(fenCode, moveList, p);
-        // 定位table滚动条
-        reLocationTable();
+    private void browseChessRecord(int tempP) {
+
         // 设置行棋方
         redGo = XiangqiUtils.isRedGo(this.getFenCode());
-        if (p % 2 != 0) {
+        if (tempP % 2 != 0) {
             redGo = !redGo;
         }
+        // 棋盘
+        board.browseChessRecord(fenCode, moveList, tempP);
+        updateP(tempP,true);
+        // 定位table滚动条
+        reLocationTable();
         // 引擎走棋
         if (robotRed.getValue() && robotBlack.getValue()) {
             // 如果引擎执红同时执黑，取消状态（否则会有问题）
@@ -537,8 +548,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         }
         int index = recordTable.getSelectionModel().getSelectedIndex();
         if (index != p && index >= 0) {
-            p = index;
-            browseChessRecord();
+            browseChessRecord(index);
         }
     }
 
@@ -548,8 +558,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
             stopGraphLink();
         }
         if (p > 0) {
-            p--;
-            browseChessRecord();
+            browseChessRecord(p-1);
         }
     }
 
@@ -559,13 +568,16 @@ public class Controller implements EngineCallBack, LinkerCallBack {
             stopGraphLink();
         }
         if (p > 0) {
+            int tempP = p;
             if (redGo && robotRed.getValue() || !redGo && robotBlack.getValue()) {
-                p -= 1;
+                tempP = tempP -1;
             } else {
-                p -= 2;
+                tempP = tempP -2;
             }
-            if (p < 0) p = 0;
-            browseChessRecord();
+            if (tempP < 0) {
+                tempP = 0;
+            };
+            browseChessRecord(tempP);
         }
     }
 
@@ -575,8 +587,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
             stopGraphLink();
         }
         if (p < moveList.size()) {
-            p++;
-            browseChessRecord();
+            browseChessRecord(p+1);
         }
     }
 
@@ -586,16 +597,14 @@ public class Controller implements EngineCallBack, LinkerCallBack {
             stopGraphLink();
         }
         if (p < moveList.size()) {
-            p = moveList.size();
-            browseChessRecord();
+            browseChessRecord(moveList.size());
         }
     }
 
     @FXML
     void frontButtonClick(ActionEvent event) {
         if (p > 0) {
-            p = 0;
-            browseChessRecord();
+            browseChessRecord(0);
         }
     }
 
@@ -635,7 +644,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
 
     private void dealManualInfo(String fenCode, List<String> manualList) {
         this.fenCode = fenCode;
-        newChessBoard(fenCode);
+        newChessBoard(fenCode,false);
 
         char[][] tempBoard = XiangqiUtils.copyArray(this.board.getBoard());
 
@@ -650,8 +659,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
             tempRedGo = !tempRedGo;
         }
         //滚动到最末尾
-        p = moveList.size();
-        browseChessRecord();
+        browseChessRecord(moveList.size());
     }
 
     @FXML
@@ -845,7 +853,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
             protected Object call() throws Exception {
                 try{
                     for(int i = 0 ;i<= moveList.size();i++){
-                        p = i;
+                        updateP(i,false);
                         // 设置行棋方
                         redGo = XiangqiUtils.isRedGo(fenCode);
                         if (p % 2 != 0) {
@@ -1104,9 +1112,9 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         if(DEFAULT_FEN_CODE_LIST.size()>0){
             Random random = new Random();
             int randomIndex = random.nextInt(DEFAULT_FEN_CODE_LIST.size()); // 生成一个随机索引
-            newChessBoard(DEFAULT_FEN_CODE_LIST.get(randomIndex));
+            newChessBoard(DEFAULT_FEN_CODE_LIST.get(randomIndex),true);
         }else{
-            newChessBoard(null);
+            newChessBoard(null,true);
         }
 
     }
@@ -1288,7 +1296,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
                 stopGraphLink();
             }
 
-            newChessBoard(fenCode);
+            newChessBoard(fenCode,true);
             if (XiangqiUtils.isReverse(fenCode)) {
                 reverseButtonClick(null);
             }
@@ -1299,7 +1307,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
      * 新建局面
      * @param fenCode 传null 新建默认初始局面；传fenCode 则根据fen创建局面
      */
-    private void newChessBoard(String fenCode) {
+    private void newChessBoard(String fenCode,boolean queryBook) {
         // 重置按钮
         robotRed.setValue(false);
         redButton.setDisable(false);
@@ -1317,19 +1325,25 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         this.fenCode = board.fenCode(redGo);
         moveList = new ArrayList<>();
         // 设置棋谱
-        p = 0;
+        updateP(0,queryBook);
         resetTable();
-        // 库招显示
-        this.bookTable.getItems().clear();
         // 重置趋势图
         initLineChart();
         // 重置引擎思考输出
         listView.getItems().clear();
         // 清空思考状态信息
         this.infoShowLabel.setText("");
-
         System.gc();
     }
+
+    private void queryAndShowBookResults() {
+        List<String> subMoveList = moveList.subList(0, p);
+        long s = System.currentTimeMillis();
+        List<BookData> results = OpenBookManager.getInstance().queryBook(board.getBoard(), redGo, subMoveList.size() / 2 >= Properties.getInstance().getOffManualSteps());
+        System.out.println("查询库时间" + (System.currentTimeMillis() - s));
+        this.showBookResults(results);
+    }
+
     private void resetTable() {
         recordTable.getItems().clear();
         recordTable.getItems().add(new ManualRecord(p, "初始局面", 0));
@@ -1587,23 +1601,23 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     @Override
     public void showBookResults(List<BookData> list) {
         this.bookTable.getItems().clear();
-        for (BookData bd : list) {
-            String move = bd.getMove();
-            bd.setWord(board.translate(move, false));
-            this.bookTable.getItems().add(bd);
+        if(list != null && list.size() > 0){
+            for (BookData bd : list) {
+                String move = bd.getMove();
+                bd.setWord(board.translate(move, false));
+                this.bookTable.getItems().add(bd);
+            }
         }
     }
 
     @FXML
     public void bookTableClick(MouseEvent event) {
         if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
-            if (robotAnalysis.getValue()) {
-                BookData bd = bookTable.getSelectionModel().getSelectedItem();
-                Platform.runLater(() -> {
-                    board.move(bd.getMove());
-                    goCallBack(bd.getMove());
-                });
-            }
+            BookData bd = bookTable.getSelectionModel().getSelectedItem();
+            Platform.runLater(() -> {
+                board.move(bd.getMove());
+                goCallBack(bd.getMove());
+            });
         }
     }
 
@@ -1644,7 +1658,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     @Override
     public void linkerInitChessBoard(String fenCode, boolean isReverse) {
         Platform.runLater(() -> {
-            newChessBoard(fenCode);
+            newChessBoard(fenCode,true);
             if (isReverse) {
                 reverseButtonClick(null);
             }
@@ -1692,7 +1706,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         boolean tmpRed = robotRed.getValue(), tmpBlack = robotBlack.getValue(), tmpAnalysis = robotAnalysis.getValue(), tmpLink = linkMode.getValue(), tmpReverse = isReverse.getValue();
 
         String fenCode = board.fenCode(f ? !redGo : redGo);
-        newChessBoard(fenCode);
+        newChessBoard(fenCode,true);
 
         isReverse.setValue(tmpReverse);
         board.reverse(tmpReverse);
