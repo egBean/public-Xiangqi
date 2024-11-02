@@ -494,7 +494,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     private void updateP(Integer p,boolean queryBook){
         this.p = p;
         if(queryBook){
-            queryAndShowBookResults();
+            ExecutorsUtils.getInstance().execTwo(this::queryAndShowBookResults);
         }
     }
     private int getScore() {

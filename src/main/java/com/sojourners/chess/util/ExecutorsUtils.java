@@ -1,7 +1,6 @@
 package com.sojourners.chess.util;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 public class ExecutorsUtils {
 
@@ -9,8 +8,13 @@ public class ExecutorsUtils {
 
     private ExecutorService threadPoolExecutor;
 
+    private ExecutorService threadPoolExecutorTwo;
+
     private ExecutorsUtils() {
         threadPoolExecutor = Executors.newSingleThreadExecutor();
+        threadPoolExecutorTwo = new ThreadPoolExecutor(1, 1,
+                0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<Runnable>(),new ThreadPoolExecutor.DiscardOldestPolicy());
     }
 
     public static ExecutorsUtils getInstance() {
@@ -26,6 +30,9 @@ public class ExecutorsUtils {
 
     public void exec(Runnable task) {
         threadPoolExecutor.execute(task);
+    }
+    public void execTwo(Runnable task) {
+        threadPoolExecutorTwo.execute(task);
     }
 
     public void close() {
