@@ -12,9 +12,12 @@ public class ExecutorsUtils {
 
     private ExecutorsUtils() {
         threadPoolExecutor = Executors.newSingleThreadExecutor();
+
+
+        BlockingQueue<Runnable> workQueue = new ArrayBlockingQueue<>(1);
         threadPoolExecutorTwo = new ThreadPoolExecutor(1, 1,
                 0L, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<Runnable>(),new ThreadPoolExecutor.DiscardOldestPolicy());
+                workQueue,new ThreadPoolExecutor.DiscardOldestPolicy());
     }
 
     public static ExecutorsUtils getInstance() {
