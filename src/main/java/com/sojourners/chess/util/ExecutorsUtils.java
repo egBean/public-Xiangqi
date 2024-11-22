@@ -40,6 +40,7 @@ public class ExecutorsUtils {
 
     public void close() {
         threadPoolExecutor.shutdownNow();
+        threadPoolExecutorTwo.shutdownNow();
     }
 
 }
