@@ -162,9 +162,6 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     private Button bookSwitchButton;
     @FXML
     private Button linkButton;
-    @FXML
-    private Button replayButton;
-
     private String fenCode;
 
     public String getFenCode() {
@@ -183,7 +180,6 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     private TableView<BookData> bookTable;
 
 
-    private SimpleObjectProperty<Boolean> replayFlag = new SimpleObjectProperty<>(false);
     private SimpleObjectProperty<Boolean> robotRed = new SimpleObjectProperty<>(false);
     private SimpleObjectProperty<Boolean> robotBlack = new SimpleObjectProperty<>(false);
     private SimpleObjectProperty<Boolean> robotAnalysis = new SimpleObjectProperty<>(false);
@@ -207,14 +203,6 @@ public class Controller implements EngineCallBack, LinkerCallBack {
 
     public boolean isRedGo() {
         return redGo;
-    }
-
-    public XYChart.Series getLineChartSeries(){
-        return lineChartSeries;
-    }
-
-    public Boolean getReplayFlag() {
-        return replayFlag.getValue();
     }
 
     @FXML
@@ -830,56 +818,6 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         }
     }
 
-    @FXML
-    private void replayButtonClick(ActionEvent e) {
-
-        if (engine == null) {
-            DialogUtils.showWarningDialog("提示", "引擎未加载");
-            return;
-        }
-        if(replayFlag.getValue()){
-            DialogUtils.showWarningDialog("提示", "复盘分析中");
-            return;
-        }
-        engineStop();
-        replayFlag.setValue(true);
-        robotRed.setValue(false);
-        robotBlack.setValue(false);
-        robotAnalysis.setValue(false);
-        ObservableList<Integer> scoreList = FXCollections.observableArrayList();
-        scoreList.addListener(new MyListChangeListener(this, moveList.size()+1));
-
-        ProgressStage.of(App.getMainStage(), new Task<Object>() {
-            @Override
-            protected Object call() throws Exception {
-                try{
-                    for(int i = 0 ;i<= moveList.size();i++){
-                        updateP(i,false);
-                        // 设置行棋方
-                        redGo = XiangqiUtils.isRedGo(fenCode);
-                        if (p % 2 != 0) {
-                            redGo = !redGo;
-                        }
-                        engine.setThreadNum(prop.getThreadNum());
-                        engine.setHashSize(prop.getHashSize());
-                        long analysisTime = prop.getAnalysisValue()>=1000?prop.getAnalysisValue():1000L;
-                        engine.setAnalysisModel(Engine.AnalysisModel.FIXED_TIME,analysisTime);
-
-                        engine.analysis(fenCode, moveList.subList(0, p), board.getBoard(), redGo);
-                        sleep(analysisTime+200);
-                        Integer lastScore = engine.getLastScore();
-                        scoreList.add(lastScore);
-                    }
-                    replayFlag.setValue(false);
-                }catch (Exception e2){
-                    e2.printStackTrace();
-                    replayFlag.setValue(false);
-                }
-                return null;
-            }
-        },"复盘中").show();
-    }
-
     private void sleep(long time){
         try {
             Thread.sleep(time);
@@ -1068,7 +1006,6 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         immediateButton.setTooltip(new Tooltip("立即出招"));
         linkButton.setTooltip(new Tooltip("连线"));
         bookSwitchButton.setTooltip(new Tooltip("启用库招"));
-        replayButton.setTooltip(new Tooltip("复盘"));
     }
 
     private void initChessBoard() {
