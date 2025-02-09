@@ -481,9 +481,9 @@ public class Controller implements EngineCallBack, LinkerCallBack {
 
     private void updateP(Integer p,boolean queryBook){
         this.p = p;
-        if(queryBook&& Properties.getInstance().getBookSwitch()){
-            ExecutorsUtils.getInstance().execTwo(this::queryAndShowBookResults);
-        }
+//        if(queryBook&& Properties.getInstance().getBookSwitch()){
+//            ExecutorsUtils.getInstance().execTwo(this::queryAndShowBookResults);
+//        }
     }
     private int getScore() {
         if (listView.getItems().size() <= 0)
