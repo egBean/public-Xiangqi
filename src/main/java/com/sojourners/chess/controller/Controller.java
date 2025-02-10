@@ -471,7 +471,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         recordTable.getItems().add(new ManualRecord(p, board.translate(move, true), 0));
         reLocationTable();
         // 趋势图
-        lineChartSeries.getData().add(new XYChart.Data<>(p-1, score > 1000 ? 1000 : (score < -1000 ? -1000 : score)));
+        lineChartSeries.getData().add(new XYChart.Data<>(p-1, score > 1000 ? 1000 : (Math.max(score, -1000))));
         // 触发引擎走棋
         if (redGo && robotRed.getValue() || !redGo && robotBlack.getValue() || robotAnalysis.getValue()) {
             engineGo();
