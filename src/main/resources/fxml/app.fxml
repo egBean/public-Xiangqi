@@ -215,6 +215,26 @@
                                  <children>
                                     <TabPane side="BOTTOM" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                       <tabs>
+                                        <Tab text="库招">
+                                          <content>
+                                              <BorderPane prefHeight="200.0" prefWidth="200.0">
+                                                  <center>
+                                                      <TableView fx:id="bookTable" onMouseClicked="#bookTableClick" prefHeight="200.0" prefWidth="200.0" style="-fx-background-insets: 100%;" stylesheets="@../style/table.css" BorderPane.alignment="CENTER">
+                                                          <columns>
+                                                              <TableColumn editable="false" prefWidth="75.0" sortable="false" text="招法" />
+                                                              <TableColumn editable="false" prefWidth="64.0" sortable="false" text="分数" />
+                                                              <TableColumn editable="false" prefWidth="64.0" sortable="false" text="胜率" />
+                                                              <TableColumn editable="false" prefWidth="60.0" sortable="false" text="胜" />
+                                                              <TableColumn editable="false" prefWidth="60.0" sortable="false" text="和" />
+                                                              <TableColumn editable="false" prefWidth="60.0" sortable="false" text="负" />
+                                                              <TableColumn editable="false" prefWidth="75.0" sortable="false" text="备注" />
+                                                              <TableColumn editable="false" sortable="false" text="来源" />
+                                                          </columns>
+                                                      </TableView>
+                                                  </center>
+                                              </BorderPane>
+                                          </content>
+                                        </Tab>
                                         <Tab text="棋谱">
                                              <content>
                                                 <BorderPane prefHeight="200.0" prefWidth="200.0">
@@ -246,25 +266,6 @@
                                                 <BorderPane fx:id="charPane" prefHeight="200.0" prefWidth="200.0" />
                                              </content>
                                         </Tab>
-                                        <Tab text="库招">
-                                             <content>
-                                                <BorderPane prefHeight="200.0" prefWidth="200.0">
-                                                   <center>
-                                                      <TableView fx:id="bookTable" onMouseClicked="#bookTableClick" prefHeight="200.0" prefWidth="200.0" style="-fx-background-insets: 100%;" stylesheets="@../style/table.css" BorderPane.alignment="CENTER">
-                                                        <columns>
-                                                          <TableColumn editable="false" prefWidth="75.0" sortable="false" text="招法" />
-                                                          <TableColumn editable="false" prefWidth="64.0" sortable="false" text="分数" />
-                                                            <TableColumn editable="false" prefWidth="64.0" sortable="false" text="胜率" />
-                                                            <TableColumn editable="false" prefWidth="60.0" sortable="false" text="胜" />
-                                                            <TableColumn editable="false" prefWidth="60.0" sortable="false" text="和" />
-                                                            <TableColumn editable="false" prefWidth="60.0" sortable="false" text="负" />
-                                                            <TableColumn editable="false" prefWidth="75.0" sortable="false" text="备注" />
-                                                            <TableColumn editable="false" sortable="false" text="来源" />
-                                                        </columns>
-                                                      </TableView>
-                                                   </center>
-                                                </BorderPane>
-                                             </content></Tab>
                                       </tabs>
                                     </TabPane>
                                  </children></AnchorPane>
