@@ -6,6 +6,7 @@ import com.sojourners.chess.util.StringUtils;
 import com.sojourners.chess.util.XiangqiUtils;
 import javafx.scene.canvas.Canvas;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -151,6 +152,8 @@ public class ChessBoard {
         // 默认不翻转
         isReverse = false;
 
+        this.tipFirst = null;
+        this.tipSecond = null;
         this.paint();
     }
 
@@ -404,7 +407,25 @@ public class ChessBoard {
         return stepForEngine(x1, y1, x2, y2);
     }
 
-    private String stepForEngine(int x1, int y1, int x2, int y2) {
+    public List<String> getTacticList(boolean redGo) {
+        List<String> list = new ArrayList<>();
+        for (int i = 0; i < board.length; i++) {
+            for (int j = 0; j < board[0].length; j++) {
+                if (board[i][j] != ' ' && XiangqiUtils.isRed(board[i][j]) == redGo) {
+                    for (int i2 = 0; i2 < board.length; i2++) {
+                        for (int j2 = 0; j2 < board[0].length; j2++) {
+                            if ((i != i2 || j != j2) && XiangqiUtils.canGo(board, i, j, i2, j2)) {
+                                list.add(stepForEngine(j, i, j2, i2));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return list;
+    }
+
+    public static String stepForEngine(int x1, int y1, int x2, int y2) {
         StringBuffer sb = new StringBuffer();
         sb.append((char)('a' + x1));
         sb.append(9 - y1);

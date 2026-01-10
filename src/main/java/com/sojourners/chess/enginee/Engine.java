@@ -33,6 +33,11 @@ public class Engine {
     private volatile boolean hashSizeChange;
     private int hashSize;
 
+    /**
+     * 停止标志位
+     */
+    private volatile boolean stopFlag;
+
     private BufferedReader reader;
 
     private BufferedWriter writer;
@@ -64,6 +69,9 @@ public class Engine {
                 while ((line = reader.readLine()) != null) {
                     System.out.println(line);
                     if (line.contains("nps")) {
+                        if (line.contains("info depth 1")) {
+                            stopFlag = false;
+                        }
                         thinkDetail(line);
                     } else if (line.contains("bestmove")) {
                         bestMove(line);
@@ -113,7 +121,7 @@ public class Engine {
                             f.set(true);
                         }
                         if (line.startsWith("option") && line.contains("name") && line.contains("type") && line.contains("default")
-                            && !line.contains("Threads") && !line.contains("Hash")) {
+                                && !line.contains("Threads") && !line.contains("Hash")) {
 
                             String[] str = line.split("name|type|default");
                             String key = str[1].trim();
@@ -178,6 +186,11 @@ public class Engine {
         return true;
     }
     private void bestMove(String msg) {
+        if (stopFlag) {
+            stopFlag = false;
+            return;
+        }
+
         String[] str = msg.split(" ");
         if (str.length < 2 || !validateMove(str[1])) {
             return;
@@ -261,12 +274,12 @@ public class Engine {
                 }
 
             }
-            this.analysis(fenCode, moves);
+            this.analysis(fenCode, moves, null);
         });
 
     }
 
-    private void analysis(String fenCode, List<String> moves) {
+    public void analysis(String fenCode, List<String> moves, List<String> tacticList) {
         stop();
 
         if (threadNumChange) {
@@ -288,16 +301,29 @@ public class Engine {
         }
         cmd(sb.toString());
 
+        boolean hasTactics = tacticList != null && !tacticList.isEmpty();
+        if (hasTactics) {
+            sb = new StringBuilder();
+            sb.append(" searchmoves");
+            for (String tactic : tacticList) {
+                sb.append(" ").append(tactic);
+            }
+        }
         if (analysisModel == AnalysisModel.FIXED_STEPS) {
-            cmd("go depth " + analysisValue);
+            cmd("go depth " + analysisValue + (hasTactics ? sb.toString() : ""));
         } else if (analysisModel == AnalysisModel.FIXED_TIME) {
-            cmd("go movetime " + analysisValue);
+            cmd("go movetime " + analysisValue + (hasTactics ? sb.toString() : ""));
         } else {
-            cmd("go infinite");
+            cmd("go infinite" + (hasTactics ? sb.toString() : ""));
         }
     }
 
+    public void moveNow() {
+        cmd("stop");
+    }
+
     public void stop() {
+        stopFlag = true;
         cmd("stop");
     }
 

@@ -34,7 +34,9 @@ public class OpenBookManager {
         localOpenBooks.clear();
         for (String path : prop.getOpenBookList()) {
             try {
-                if (path.endsWith(".obk")) {
+                if (path.endsWith(".xqb")) {
+                    localOpenBooks.add(new XqbOpenBook(path));
+                } else if (path.endsWith(".obk")) {
                     localOpenBooks.add(new BhOpenBook(path));
                 } else if (path.endsWith(".pfBook")) {
                     localOpenBooks.add(new PfOpenBook(path));

@@ -155,6 +155,8 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     private Button bookSwitchButton;
     @FXML
     private Button linkButton;
+    @FXML
+    private Button changeTacticButton;
 
     private String fenCode;
     private List<String> moveList;
@@ -184,6 +186,11 @@ public class Controller implements EngineCallBack, LinkerCallBack {
      * 正在思考（用于连线判断）
      */
     private volatile boolean isThinking;
+
+    /**
+     * 变招列表
+     */
+    private List<String> tacticList;
 
     @FXML
     public void newButtonClick(ActionEvent event) {
@@ -304,7 +311,27 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     @FXML
     public void immediateButtonClick(ActionEvent event) {
         if (redGo && robotRed.getValue() || !redGo && robotBlack.getValue()) {
+            if (engine != null) {
+                engine.moveNow();
+            }
+        }
+    }
+
+    @FXML
+    public void changeTacticButtonClick(ActionEvent event) {
+        if (robotRed.getValue() && redGo || robotBlack.getValue() && !redGo || robotAnalysis.getValue()) {
             engineStop();
+            if (tacticList == null || tacticList.size() <= 1) {
+                tacticList = board.getTacticList(redGo);
+            }
+            if (!listView.getItems().isEmpty()) {
+                String tacticNow = listView.getItems().get(0).getDetail().get(0);
+                tacticList.remove(tacticNow);
+            }
+            engine.setThreadNum(prop.getThreadNum());
+            engine.setHashSize(prop.getHashSize());
+            engine.setAnalysisModel(robotAnalysis.getValue() ? Engine.AnalysisModel.INFINITE : prop.getAnalysisModel(), prop.getAnalysisValue());
+            engine.analysis(fenCode, moveList.subList(0, p), tacticList);
         }
     }
 
@@ -385,6 +412,9 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         } else {
             this.isThinking = false;
         }
+
+        // 重置变招列表
+        tacticList = null;
 
         engine.setThreadNum(prop.getThreadNum());
         engine.setHashSize(prop.getHashSize());
@@ -834,6 +864,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         blackButton.setTooltip(new Tooltip("引擎执黑"));
         analysisButton.setTooltip(new Tooltip("分析模式"));
         immediateButton.setTooltip(new Tooltip("立即出招"));
+        changeTacticButton.setTooltip(new Tooltip("变招"));
         linkButton.setTooltip(new Tooltip("连线"));
         bookSwitchButton.setTooltip(new Tooltip("启用库招"));
 
