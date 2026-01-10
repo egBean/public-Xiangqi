@@ -632,16 +632,18 @@ public class Controller implements EngineCallBack, LinkerCallBack {
     }
 
     @FXML
+    public void upgradeClick(ActionEvent e) {
+        SystemUtils.openBrowser("https://github.com/sojourners/public-Xiangqi/releases");
+    }
+
+    @FXML
+    public void instructionClick(ActionEvent e) {
+        SystemUtils.openBrowser("https://github.com/sojourners/public-Xiangqi/blob/master/MANUAL.md");
+    }
+
+    @FXML
     public void homeClick(ActionEvent e) {
-        Desktop desktop = Desktop.getDesktop();
-        if (Desktop.isDesktopSupported() && desktop.isSupported(Desktop.Action.BROWSE)) {
-            try {
-                URI uri = new URI("https://github.com/sojourners/public-Xiangqi");
-                desktop.browse(uri);
-            } catch (Exception e1) {
-                e1.printStackTrace();
-            }
-        }
+        SystemUtils.openBrowser("https://github.com/sojourners/public-Xiangqi");
     }
 
     @FXML

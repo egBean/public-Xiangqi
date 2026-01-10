@@ -97,6 +97,8 @@
           <Menu mnemonicParsing="false" text="帮助">
             <items>
               <MenuItem mnemonicParsing="false" onAction="#homeClick" text="主页" />
+                  <MenuItem mnemonicParsing="false" onAction="#instructionClick" text="使用说明" />
+                  <MenuItem mnemonicParsing="false" onAction="#upgradeClick" text="查看更新" />
                   <MenuItem mnemonicParsing="false" onAction="#aboutClick" text="关于" />
             </items>
           </Menu>
