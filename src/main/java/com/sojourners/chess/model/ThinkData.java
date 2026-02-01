@@ -15,6 +15,8 @@ public class ThinkData {
 
     private Integer mate;
 
+    private Integer pv;
+
     private Long nps;
 
     private Long time;
@@ -35,6 +37,7 @@ public class ThinkData {
         // 生成title
         StringBuilder sb = new StringBuilder();
         sb.append("深度: ").append(depth).append("  ");
+        sb.append("PV: ").append(pv).append("  ");
         boolean f = false;
         if (score == null) {
             sb.append("绝杀: ");
@@ -127,5 +130,13 @@ public class ThinkData {
 
     public void setDetail(List<String> detail) {
         this.detail = detail;
+    }
+
+    public Integer getPv() {
+        return pv;
+    }
+
+    public void setPv(Integer pv) {
+        this.pv = pv;
     }
 }

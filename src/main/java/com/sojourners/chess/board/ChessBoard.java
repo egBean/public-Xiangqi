@@ -72,7 +72,9 @@ public class ChessBoard {
 
     private Step prevStep;
 
-    private Step tipFirst, tipSecond;
+    private boolean showMultiPV;
+
+    private List<MoveTip> moveTips = new ArrayList<>();
 
     private boolean isReverse;
 
@@ -101,26 +103,52 @@ public class ChessBoard {
         }
     }
     public class Step {
-        Point first;
-        Point second;
-        public Step(Point first, Point second) {
+        Point start;
+        Point end;
+        public Step(Point start, Point end) {
+            this.start = start;
+            this.end = end;
+        }
+
+        public Point getStart() {
+            return start;
+        }
+
+        public void setStart(Point start) {
+            this.start = start;
+        }
+
+        public Point getEnd() {
+            return end;
+        }
+
+        public void setEnd(Point end) {
+            this.end = end;
+        }
+    }
+
+    public class MoveTip {
+        Step first;
+        Step second;
+
+        public MoveTip(Step first, Step second) {
             this.first = first;
             this.second = second;
         }
 
-        public Point getFirst() {
+        public Step getFirst() {
             return first;
         }
 
-        public void setFirst(Point first) {
+        public void setFirst(Step first) {
             this.first = first;
         }
 
-        public Point getSecond() {
+        public Step getSecond() {
             return second;
         }
 
-        public void setSecond(Point second) {
+        public void setSecond(Step second) {
             this.second = second;
         }
     }
@@ -137,7 +165,7 @@ public class ChessBoard {
         CUSTOM;
     }
 
-    public ChessBoard(Canvas canvas, BoardSize bs, BoardStyle style, boolean stepTip, boolean stepSound, boolean showNumber, String fenCode) {
+    public ChessBoard(Canvas canvas, BoardSize bs, BoardStyle style, boolean stepTip, boolean showMultiPV, boolean stepSound, boolean showNumber, String fenCode) {
         if (this.boardRender == null) {
             this.boardRender = style == BoardStyle.CUSTOM ? new CustomBoardRender(canvas) : new DefaultBoardRender(canvas);
         }
@@ -145,6 +173,7 @@ public class ChessBoard {
         this.stepTip = stepTip;
         this.stepSound = stepSound;
         this.showNumber = showNumber;
+        this.showMultiPV = showMultiPV;
         // 设置局面
         setNewBoard(fenCode);
         // 设置棋盘大小
@@ -152,8 +181,6 @@ public class ChessBoard {
         // 默认不翻转
         isReverse = false;
 
-        this.tipFirst = null;
-        this.tipSecond = null;
         this.paint();
     }
 
@@ -193,6 +220,10 @@ public class ChessBoard {
                 }
             }
         }
+    }
+
+    public void showMultiPV(boolean showMultiPV) {
+        this.showMultiPV = showMultiPV;
     }
 
     private void setNewBoard(String fenCode) {
@@ -323,23 +354,29 @@ public class ChessBoard {
         if (p == 0) {
             // 开始局面
             prevStep = null;
-            tipFirst = null; tipSecond = null;
+            moveTips.clear();
             remark = null;
             paint();
         } else {
             for (int i = 0; i < p - 1; i++) {
                 Step s = stepForBoard(moveList.get(i));
-                board[s.second.y][s.second.x] = board[s.first.y][s.first.x];
-                board[s.first.y][s.first.x] = ' ';
+                board[s.getEnd().y][s.getEnd().x] = board[s.getStart().y][s.getStart().x];
+                board[s.getStart().y][s.getStart().x] = ' ';
             }
             Step s = stepForBoard(moveList.get(p - 1));
-            move(s.first.x, s.first.y, s.second.x, s.second.y);
+            move(s.getStart().x, s.getStart().y, s.getEnd().x, s.getEnd().y);
         }
     }
 
-    public void setTip(String firstMove, String secondMove) {
-        this.tipFirst = stepForBoard(firstMove);
-        this.tipSecond = stepForBoard(secondMove);
+    public void setTip(String firstMove, String secondMove, int pv) {
+        if (pv < moveTips.size()) {
+            moveTips.clear();
+        }
+        if (pv > moveTips.size()) {
+            moveTips.add(new MoveTip(stepForBoard(firstMove), stepForBoard(secondMove)));
+        } else {
+            moveTips.set(pv - 1, new MoveTip(stepForBoard(firstMove), stepForBoard(secondMove)));
+        }
         if (stepTip) {
             paint();
         }
@@ -365,7 +402,7 @@ public class ChessBoard {
             return null;
         }
         Step s = stepForBoard(step);
-        move(s.first.x, s.first.y, s.second.x, s.second.y);
+        move(s.getStart().x, s.getStart().y, s.getEnd().x, s.getEnd().y);
         return s;
     }
 
@@ -401,7 +438,7 @@ public class ChessBoard {
         }
 
         prevStep = new Step(new Point(x1, y1), new Point(x2, y2));
-        tipFirst = null; tipSecond = null;
+        moveTips.clear();
         remark = null;
         paint();
         return stepForEngine(x1, y1, x2, y2);
@@ -435,7 +472,7 @@ public class ChessBoard {
     }
 
     private void paint() {
-        this.boardRender.paint(boardSize, this.board, prevStep, remark, stepTip, tipFirst, tipSecond, isReverse, showNumber);
+        this.boardRender.paint(boardSize, this.board, prevStep, remark, stepTip, showMultiPV, moveTips, isReverse, showNumber);
     }
 
     /**

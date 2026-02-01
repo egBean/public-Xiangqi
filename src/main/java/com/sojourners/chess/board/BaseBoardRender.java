@@ -1,11 +1,15 @@
 package com.sojourners.chess.board;
 
 import com.sojourners.chess.util.MathUtils;
+import javafx.geometry.VPos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.TextAlignment;
 import javafx.scene.transform.Rotate;
+
+import java.util.List;
 
 
 public abstract class BaseBoardRender implements BoardRender {
@@ -22,7 +26,7 @@ public abstract class BaseBoardRender implements BoardRender {
     }
 
     public void paint(ChessBoard.BoardSize boardSize, char[][] board, ChessBoard.Step prevStep, ChessBoard.Point remark,
-                      boolean stepTip, ChessBoard.Step tipFirst, ChessBoard.Step tipSecond, boolean isReverse, boolean showNumber) {
+                      boolean stepTip, boolean showMultiPV, List<ChessBoard.MoveTip> moveTips, boolean isReverse, boolean showNumber) {
         int padding = getPadding(boardSize);
         int piece = getPieceSize(boardSize);
         int pos = padding + piece / 2;
@@ -42,8 +46,8 @@ public abstract class BaseBoardRender implements BoardRender {
         drawCenterText(pos, piece, boardSize);
         // 上一步走棋记号
         if (prevStep != null) {
-            drawStepRemark(pos, piece, prevStep.first.x, prevStep.first.y, true, isReverse, boardSize);
-            drawStepRemark(pos, piece, prevStep.second.x, prevStep.second.y, true, isReverse, boardSize);
+            drawStepRemark(pos, piece, prevStep.getStart().x, prevStep.getStart().y, true, isReverse, boardSize);
+            drawStepRemark(pos, piece, prevStep.getEnd().x, prevStep.getEnd().y, true, isReverse, boardSize);
         }
         // 已选择棋子记号
         if (remark != null) {
@@ -52,11 +56,18 @@ public abstract class BaseBoardRender implements BoardRender {
         // 绘制棋子
         drawPieces(pos, piece, board, isReverse, boardSize);
         // 绘制棋步提示
-        if (stepTip && tipFirst != null) {
-            drawStepTips(pos, piece, tipFirst.first.x, tipFirst.first.y, tipFirst.second.x, tipFirst.second.y, isReverse, true);
-        }
-        if (stepTip && tipSecond != null) {
-            drawStepTips(pos, piece, tipSecond.first.x, tipSecond.first.y, tipSecond.second.x, tipSecond.second.y, isReverse, false);
+        if (stepTip && moveTips != null) {
+            for (int i = 0; i < moveTips.size(); i++) {
+                ChessBoard.MoveTip tip = moveTips.get(i);
+                ChessBoard.Step first = tip.getFirst();
+                if (first != null) {
+                    drawStepTips(pos, piece, first.getStart().x, first.getStart().y, first.getEnd().x, first.getEnd().y, showMultiPV, i + 1, isReverse, Color.PURPLE);
+                }
+                ChessBoard.Step second = tip.getSecond();
+                if (second != null) {
+                    drawStepTips(pos, piece, second.getStart().x, second.getStart().y, second.getEnd().x, second.getEnd().y, showMultiPV, i + 1, isReverse, Color.GREEN);
+                }
+            }
         }
     }
 
@@ -104,7 +115,7 @@ public abstract class BaseBoardRender implements BoardRender {
     }
 
     @Override
-    public void drawStepTips(int pos, int piece, int x1, int y1, int x2, int y2, boolean isReverse, boolean isFirst) {
+    public void drawStepTips(int pos, int piece, int x1, int y1, int x2, int y2, boolean showMultiPV, int pv, boolean isReverse, Color color) {
         x1 = pos + piece * getReverseX(x1, isReverse);
         y1 = pos + piece * getReverseY(y1, isReverse);
         x2 = pos + piece * getReverseX(x2, isReverse);
@@ -112,24 +123,57 @@ public abstract class BaseBoardRender implements BoardRender {
 
         gc.save();
 
+        gc.setGlobalAlpha(0.5);
+        gc.setFill(color);
+
         double angle = MathUtils.calculateAngle(x1, y1, x2, y2);
         Rotate r = new Rotate(angle, x1, y1);
         gc.setTransform(r.getMxx(), r.getMyx(), r.getMxy(), r.getMyy(), r.getTx(), r.getTy());
 
-        gc.setGlobalAlpha(0.5);
-        Color color = isFirst ? Color.PURPLE : Color.GREEN;
-        gc.setFill(color);
-
         int len = (int) MathUtils.calculateDistance(x1, y1, x2, y2);
-        x2 = x1 - len;
+        int tmpX2 = x1 - len;
 
-        x1 -= piece / 4;
+        int tmpX1 = x1 - piece / 4;
         double offY = piece / 12.5, offX = piece / 4.5, h = piece / 6.5;
-        gc.fillPolygon(new double[]{x1, x2 + offX, x2 + offX + h / 2, x2, x2 + offX + h / 2, x2 + offX, x1},
-                new double[]{y1 - offY, y1 - offY, y1 - offY - h, y1, y1 + offY + h, y1 + offY, y1 + offY},
-                7);
+
+        // 箭头 + 圆合并为一条路径，只 fill 一次，避免重叠区颜色叠加变深
+        gc.beginPath();
+        gc.moveTo(tmpX1, y1 - offY);
+        gc.lineTo(tmpX2 + offX, y1 - offY);
+        gc.lineTo(tmpX2 + offX + h / 2, y1 - offY - h);
+        gc.lineTo(tmpX2, y1);
+        gc.lineTo(tmpX2 + offX + h / 2, y1 + offY + h);
+        gc.lineTo(tmpX2 + offX, y1 + offY);
+        gc.lineTo(tmpX1, y1 + offY);
+        gc.closePath();
+
+        if (showMultiPV) {
+            double cx = x1 - piece / 8.0 - len / 2.0;
+            double cy = y1;
+            double rr = piece / 6d;
+            gc.moveTo(cx + rr, cy);
+            gc.arc(cx, cy, rr, rr, 0, 360);
+        }
+
+        gc.fill();
 
         gc.restore();
+
+        // 圆内绘制 PV 数字（restore 后绘制，不随箭头旋转），颜色与箭头一致
+        if (showMultiPV) {
+            gc.save();
+            double rad = Math.toRadians(angle);
+            double centerX = x1 - (piece / 8.0 + len / 2.0) * Math.cos(rad);
+            double centerY = y1 - (piece / 8.0 + len / 2.0) * Math.sin(rad);
+            double fontSize = piece / 3.6d;
+            gc.setFont(Font.font(fontSize));
+            gc.setTextAlign(TextAlignment.CENTER);
+            gc.setTextBaseline(VPos.CENTER);
+            gc.setFill(Color.WHITE);
+            gc.setGlobalAlpha(1);
+            gc.fillText(String.valueOf(pv), centerX, centerY);
+            gc.restore();
+        }
     }
 
     int getReverseY(int y, boolean isReverse) {

@@ -48,6 +48,8 @@ public class Engine {
 
     private Random random;
 
+    private int multiPV;
+
     public enum AnalysisModel {
         FIXED_TIME,
         FIXED_STEPS,
@@ -59,6 +61,12 @@ public class Engine {
         this.cb = cb;
         this.random = new SecureRandom();
 
+        if (ec.getOptions().get("MultiPV") != null) {
+            multiPV = Integer.parseInt(ec.getOptions().get("MultiPV"));
+        } else {
+            multiPV = 1;
+        }
+
         process = Runtime.getRuntime().exec(ec.getPath(), null, PathUtils.getParentDir(ec.getPath()));
         reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
         writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
@@ -69,7 +77,7 @@ public class Engine {
                 while ((line = reader.readLine()) != null) {
                     System.out.println(line);
                     if (line.contains("nps")) {
-                        if (line.contains("info depth 1")) {
+                        if (line.contains("info depth 1 ")) {
                             stopFlag = false;
                         }
                         thinkDetail(line);
@@ -91,6 +99,10 @@ public class Engine {
                 cmd("setoption " + entry.getKey() + " " + entry.getValue());
             }
         }
+    }
+
+    public int getMultiPV() {
+        return multiPV;
     }
 
     private void sleep(long t) {
@@ -221,11 +233,15 @@ public class Engine {
 
                         } else if (flag == 3) {
                             td.setDepth(Integer.parseInt(str[i]));
+
                         } else if (flag == 4) {
                             td.setMate(Integer.parseInt(str[i]));
 
                         } else if (flag == 5) {
                             td.setScore(Integer.parseInt(str[i]));
+
+                        } else if (flag == 7) {
+                            td.setPv(Integer.parseInt(str[i]));
                         }
                         flag = 0;
                     } else {
@@ -249,6 +265,8 @@ public class Engine {
                     flag = 2;
                 } else if ("pv".equals(str[i])) {
                     flag = 6;
+                } else if ("multipv".equals(str[i])) {
+                    flag = 7;
                 }
             }
         }

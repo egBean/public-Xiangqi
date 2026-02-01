@@ -990,7 +990,8 @@ public class Controller implements EngineCallBack, LinkerCallBack {
         // 引擎停止计算
         engineStop();
         // 绘制棋盘
-        board = new ChessBoard(this.canvas, prop.getBoardSize(), prop.getBoardStyle(), prop.isStepTip(), prop.isStepSound(), prop.isShowNumber(), fenCode);
+        board = new ChessBoard(this.canvas, prop.getBoardSize(), prop.getBoardStyle(), prop.isStepTip(),
+                engine != null &&engine.getMultiPV() > 1, prop.isStepSound(), prop.isShowNumber(), fenCode);
         // 设置局面
         redGo = StringUtils.isEmpty(fenCode) ? true : fenCode.contains("w");
         this.fenCode = board.fenCode(redGo);
@@ -1082,8 +1083,11 @@ public class Controller implements EngineCallBack, LinkerCallBack {
                     prop.setEngineName(t1);
                     // 重置三个按钮
                     robotRed.setValue(false);
+                    redButton.setDisable(false);
                     robotBlack.setValue(false);
+                    blackButton.setDisable(false);
                     robotAnalysis.setValue(false);
+                    immediateButton.setDisable(false);
                     // 停止连线
                     if (linkMode.getValue()) {
                         stopGraphLink();
@@ -1170,6 +1174,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
                             engine.close();
                         }
                         engine = new Engine(ec, this);
+                        board.showMultiPV(engine.getMultiPV() > 1);
                         return;
                     }
                 }
@@ -1185,8 +1190,8 @@ public class Controller implements EngineCallBack, LinkerCallBack {
      */
     private void trickAutoClick(ChessBoard.Step step) {
         if (step != null) {
-            int x1 = step.getFirst().getX(), y1 = step.getFirst().getY();
-            int x2 = step.getSecond().getX(), y2 = step.getSecond().getY();
+            int x1 = step.getStart().getX(), y1 = step.getStart().getY();
+            int x2 = step.getEnd().getX(), y2 = step.getEnd().getY();
             if (robotBlack.getValue()) {
                 y1 = 9 - y1;
                 y2 = 9 - y2;
@@ -1204,8 +1209,8 @@ public class Controller implements EngineCallBack, LinkerCallBack {
             ChessBoard.Step s = board.stepForBoard(first);
 
             Platform.runLater(() -> {
-                board.move(s.getFirst().getX(), s.getFirst().getY(), s.getSecond().getX(), s.getSecond().getY());
-                board.setTip(second, null);
+                board.move(s.getStart().getX(), s.getStart().getY(), s.getEnd().getX(), s.getEnd().getY());
+                board.setTip(second, null, 1);
 
                 goCallBack(first);
             });
@@ -1233,7 +1238,7 @@ public class Controller implements EngineCallBack, LinkerCallBack {
                         timeShowLabel.setText(prop.getAnalysisModel() == Engine.AnalysisModel.FIXED_TIME ? "固定时间" + prop.getAnalysisValue() / 1000d + "s" : "固定深度" + prop.getAnalysisValue() + "层");
                     }
 
-                    board.setTip(td.getDetail().get(0), td.getDetail().size() > 1 ? td.getDetail().get(1) : null);
+                    board.setTip(td.getDetail().get(0), td.getDetail().size() > 1 ? td.getDetail().get(1) : null, td.getPv());
                 });
             }
         }

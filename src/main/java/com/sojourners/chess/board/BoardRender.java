@@ -15,7 +15,7 @@ public interface BoardRender {
 
     void drawPieces(int pos, int piece, char[][] board, boolean isReverse, ChessBoard.BoardSize style);
 
-    void drawStepTips(int pos, int piece, int x1, int y1, int x2, int y2, boolean isReverse, boolean isFirst);
+    void drawStepTips(int pos, int piece, int x1, int y1, int x2, int y2, boolean showMultiPV, int pv, boolean isReverse, Color color);
 
     void setAutoPieceSize(int size);
 

@@ -155,7 +155,7 @@ public class EditChessBoardController {
     }
 
     public void paint() {
-        this.boardRender.paint(boardSize, board, null, remark, false, null, null, false, false);
+        this.boardRender.paint(boardSize, board, null, remark, false, false, null, false, false);
         this.demoBoardRender.paintDemoBoard(boardSize, demoBoard, demoRemark);
     }
 
