@@ -7,10 +7,7 @@ import com.sojourners.chess.util.StringUtils;
 import com.sojourners.chess.util.XiangqiUtils;
 import javafx.scene.canvas.Canvas;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 棋盘
@@ -136,15 +133,11 @@ public class ChessBoard {
         SMALL_BOARD,
         AUTOFIT_BOARD
     }
-    public enum BoardStyle {
-        DEFAULT,
-        CUSTOM;
-    }
 
-    public ChessBoard(Canvas canvas, BoardSize bs, BoardStyle style, boolean stepTip, boolean manualTip,
+    public ChessBoard(Canvas canvas, BoardSize bs, String style, boolean stepTip, boolean manualTip,
                       boolean showMultiPV, boolean stepSound, boolean showNumber, String fenCode) {
         if (this.boardRender == null) {
-            this.boardRender = style == BoardStyle.CUSTOM ? new CustomBoardRender(canvas) : new DefaultBoardRender(canvas);
+            this.boardRender = !Objects.equals(style, "default") ? new CustomBoardRender(canvas,style) : new DefaultBoardRender(canvas);
         }
 
         this.stepTip = stepTip;
@@ -212,8 +205,8 @@ public class ChessBoard {
         }
     }
 
-    public void setBoardStyle(BoardStyle style, Canvas canvas) {
-        this.boardRender = style == BoardStyle.CUSTOM ? new CustomBoardRender(canvas) : new DefaultBoardRender(canvas);
+    public void setBoardStyle(String type, Canvas canvas) {
+        this.boardRender = !Objects.equals(type, "default") ? new CustomBoardRender(canvas,type) : new DefaultBoardRender(canvas);
         this.paint();
     }
 

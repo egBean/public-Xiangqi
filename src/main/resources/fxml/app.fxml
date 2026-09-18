@@ -10,6 +10,7 @@
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ProgressIndicator?>
 <?import javafx.scene.control.RadioMenuItem?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.SplitPane?>
@@ -27,9 +28,12 @@
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane fx:id="borderPane" minHeight="0.0" minWidth="0.0" prefHeight="712.0" prefWidth="1169.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sojourners.chess.controller.Controller">
+<StackPane xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sojourners.chess.controller.Controller">
+    <BorderPane fx:id="borderPane" minHeight="0.0" minWidth="0.0" prefHeight="712.0" prefWidth="1169.0">
     <top>
         <MenuBar BorderPane.alignment="CENTER">
             <menus>
@@ -56,6 +60,7 @@
                         <MenuItem mnemonicParsing="false" onAction="#openChessManualFile" text="打开棋谱" />
                         <MenuItem mnemonicParsing="false" onAction="#saveChessManualFile" text="保存棋谱" />
                         <MenuItem mnemonicParsing="false" onAction="#saveAsChessManualFile" text="另存为棋谱" />
+                        <MenuItem mnemonicParsing="false" onAction="#reviewButtonClick" text="复盘" />
                         <CheckMenuItem fx:id="menuOfChessNotation" mnemonicParsing="false" text="棋谱管理" />
                         <CheckMenuItem fx:id="menuOfShowTactic" mnemonicParsing="false" onAction="#menuOfShowTacticClick" text="显示分支棋步" />
                     </items>
@@ -86,14 +91,15 @@
                         <CheckMenuItem fx:id="menuOfShowNumber" mnemonicParsing="false" onAction="#showNumberClick" text="显示线路" />
                         <CheckMenuItem fx:id="menuOfTopWindow" mnemonicParsing="false" onAction="#topWindowClick" text="窗口置顶" />
                         <CheckMenuItem fx:id="menuOfShowStatus" mnemonicParsing="false" onAction="#showStatusBarClick" text="显示状态栏" />
-                        <Menu mnemonicParsing="false" text="棋盘样式">
+                        <Menu fx:id="boardTypeMenu" mnemonicParsing="false" text="棋盘样式">
                             <items>
-                                <RadioMenuItem fx:id="menuOfDefaultBoard" mnemonicParsing="false" onAction="#boardStyleSelected" text="默认">
+                                <RadioMenuItem fx:id="menuOfDefaultBoard" mnemonicParsing="false"
+                                               onAction="#boardTypeSelected" text="默认">
                                     <toggleGroup>
-                                        <ToggleGroup fx:id="boardStyle1" />
+                                        <ToggleGroup fx:id="boardTypeGroup" />
                                     </toggleGroup>
                                 </RadioMenuItem>
-                                <RadioMenuItem fx:id="menuOfCustomBoard" mnemonicParsing="false" onAction="#boardStyleSelected" text="红黑" toggleGroup="$boardStyle1" />
+                                <!-- 其余皮肤项：由 Controller#initialize 扫描 skin 目录后动态添加 -->
                             </items>
                         </Menu>
                         <Menu mnemonicParsing="false" text="棋盘大小">
@@ -258,7 +264,7 @@
                                                                         <ToolBar minHeight="-Infinity" minWidth="80.0" nodeOrientation="RIGHT_TO_LEFT" prefHeight="28.0" prefWidth="100.0" style="-fx-background-insets: 28px;" BorderPane.alignment="CENTER">
                                                                             <items>
                                                                                 <Button fx:id="manualDeleteButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#deleteButtonClick" prefHeight="24.0" prefWidth="24.0" style="-fx-background-image: url('/image/delete.png');" stylesheets="@../style/app.css" text="Button" />
-                                                                                <Button fx:id="manualScoreButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" nodeOrientation="LEFT_TO_RIGHT" onAction="#scoreButtonClick" prefHeight="24.0" prefWidth="24.0" style="-fx-background-image: url('/image/score.png');" stylesheets="@../style/app.css" text="Button" />
+                                                                                <Button fx:id="reviewButton" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" nodeOrientation="LEFT_TO_RIGHT" onAction="#reviewButtonClick" prefHeight="24.0" prefWidth="48.0" style="-fx-pref-width: 48; -fx-pref-height: 24; -fx-background-insets: 0; -fx-font-size: 11.0;" text="复盘" />
                                                                                 <Button fx:id="manualPlayButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" nodeOrientation="LEFT_TO_RIGHT" onAction="#playButtonClick" prefHeight="24.0" prefWidth="24.0" style="-fx-background-image: url('/image/play.png');" stylesheets="@../style/app.css" text="Button" />
                                                                                 <Button fx:id="manualDownButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#downwardButtonClick" prefHeight="24.0" prefWidth="24.0" style="-fx-background-image: url('/image/down-arrow.png');" stylesheets="@../style/app.css" text="Button" />
                                                                                 <Button fx:id="manualUpButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#upwardButtonClick" prefHeight="24.0" prefWidth="24.0" style="-fx-background-image: url('/image/up-arrow.png');" stylesheets="@../style/app.css" text="Button" />
@@ -276,7 +282,9 @@
                                                                                     <columns>
                                                                                         <TableColumn editable="false" prefWidth="50.0" sortable="false" text="序号" />
                                                                                         <TableColumn editable="false" prefWidth="100.0" sortable="false" text="着法" />
-                                                                                        <TableColumn editable="false" prefWidth="60.0" sortable="false" text="分数" />
+                                                                                        <TableColumn editable="false" prefWidth="130.0" sortable="false" text="分数/胜率" />
+                                                                                        <TableColumn editable="false" prefWidth="70.0" sortable="false" text="评价" />
+                                                                                        <TableColumn editable="false" prefWidth="100.0" sortable="false" text="正着" />
                                                                                     </columns>
                                                                                 </TableView>
                                                                                 <SplitPane dividerPositions="0.6" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0" stylesheets="@../style/split-pane-zero.css">
@@ -454,4 +462,11 @@
             </bottom>
         </BorderPane>
     </left>
-</BorderPane>
+    </BorderPane>
+    <StackPane fx:id="loadingOverlay" pickOnBounds="true" style="-fx-background-color: rgba(0, 0, 0, 0.3);" visible="false">
+        <VBox alignment="CENTER" spacing="14.0" StackPane.alignment="CENTER">
+            <ProgressIndicator prefHeight="64.0" prefWidth="64.0" />
+            <Label fx:id="loadingLabel" style="-fx-font-size: 16.0;" text="复盘中..." textFill="white" />
+        </VBox>
+    </StackPane>
+</StackPane>

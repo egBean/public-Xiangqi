@@ -180,7 +180,7 @@ public class WindowsGraphLinker extends AbstractGraphLinker implements MouseList
     }
 
     private void selectCursor() {
-        WinDef.HCURSOR h = User32Extra.INSTANCE.LoadCursorFromFileA(PathUtils.getJarPath() + "ui/circle.ico");
+        WinDef.HCURSOR h = User32Extra.INSTANCE.LoadCursorFromFileA(PathUtils.getJarPath() + "skin/circle.ico");
         User32Extra.INSTANCE.SetSystemCursor(h, new WinDef.DWORD(32512));
     }
 

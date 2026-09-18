@@ -7,6 +7,7 @@ import com.sojourners.chess.util.StringUtils;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 
 
@@ -22,6 +23,9 @@ public class LinkSettingController {
 
     @FXML
     private TextField mouseMoveDelay;
+
+    @FXML
+    private ComboBox<String> linkAiModel;
 
     private Properties prop;
 
@@ -59,6 +63,12 @@ public class LinkSettingController {
         }
         prop.setMouseMoveDelay(Integer.parseInt(txt));
 
+        if (linkAiModel.getValue() == null) {
+            DialogUtils.showErrorDialog("失败", "请选择识别模型");
+            return;
+        }
+        prop.setLinkAiModel(linkAiModel.getValue());
+
         App.closeLinkSetting();
     }
 
@@ -71,6 +81,10 @@ public class LinkSettingController {
 
         mouseClickDelay.setText(String.valueOf(prop.getMouseClickDelay()));
         mouseMoveDelay.setText(String.valueOf(prop.getMouseMoveDelay()));
+
+        linkAiModel.getItems().setAll("yolo11", "pose");
+        String model = prop.getLinkAiModel();
+        linkAiModel.setValue("yolo11".equalsIgnoreCase(model) ? "yolo11" : "pose");
 
     }
 

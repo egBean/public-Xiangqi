@@ -4,6 +4,8 @@ import com.sojourners.chess.App;
 import com.sojourners.chess.config.Properties;
 import com.sojourners.chess.manual.*;
 import com.sojourners.chess.model.ManualRecord;
+import com.sojourners.chess.review.GameReview;
+import com.sojourners.chess.review.ReviewItem;
 import com.sojourners.chess.util.ClipboardUtils;
 import com.sojourners.chess.util.DialogUtils;
 import com.sojourners.chess.util.PathUtils;
@@ -28,6 +30,7 @@ import javafx.stage.FileChooser;
 import javafx.util.Duration;
 
 import java.io.File;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
@@ -66,7 +69,6 @@ public class ChessManualHandle {
     private Button manualUpButton;
     private Button openManualButton;
     private Button saveManualButton;
-    private Button manualScoreButton;
     private TextField competitionNameText;
     private TextField competitionCityText;
     private TextField competitionDateText;
@@ -91,7 +93,7 @@ public class ChessManualHandle {
                              Label manualTitleLabel, TableView recordTable, ListView subRecordTable, TextArea remarkText,
                              Button manualBackButton, Button manualDeleteButton, Button manualDownButton, Button manualFinalButton,
                              Button manualForwardButton, Button manualFrontButton, Button manualPlayButton, Button manualUpButton,
-                             Button openManualButton, Button saveManualButton, Button manualScoreButton,
+                             Button openManualButton, Button saveManualButton,
                              TextField competitionNameText, TextField competitionCityText, TextField competitionDateText,
                              TextField competitionRedText, TextField competitionBlackText,
                              ChessManualCallBack cb) {
@@ -114,7 +116,6 @@ public class ChessManualHandle {
         this.manualUpButton = manualUpButton;
         this.openManualButton = openManualButton;
         this.saveManualButton = saveManualButton;
-        this.manualScoreButton = manualScoreButton;
         this.competitionNameText = competitionNameText;
         this.competitionCityText = competitionCityText;
         this.competitionDateText = competitionDateText;
@@ -151,7 +152,6 @@ public class ChessManualHandle {
         manualFinalButton.setTooltip(new Tooltip("终局"));
         openManualButton.setTooltip(new Tooltip("打开棋谱"));
         saveManualButton.setTooltip(new Tooltip("保存棋谱"));
-        manualScoreButton.setTooltip(new Tooltip("棋谱打分"));
     }
 
     private void initMenu() {
@@ -192,8 +192,59 @@ public class ChessManualHandle {
                 return new SimpleStringProperty(text);
             }
         );
+//        TableColumn<ManualRecord, String> scoreCol = (TableColumn<ManualRecord, String>) recordTable.getColumns().get(2);
+//        scoreCol.setCellValueFactory(new PropertyValueFactory<>("score"));
+
         TableColumn<ManualRecord, String> scoreCol = (TableColumn<ManualRecord, String>) recordTable.getColumns().get(2);
-        scoreCol.setCellValueFactory(new PropertyValueFactory<>("score"));
+        scoreCol.setCellValueFactory(cellData -> {
+            ManualRecord record = cellData.getValue();
+            Integer score = record.getScore();
+            BigDecimal winRate = record.getWinRateBottom();
+
+            if (score == null && winRate == null) {
+                return new SimpleStringProperty("");
+            }
+            if (winRate == null) {
+                return new SimpleStringProperty(String.valueOf(score));
+            }
+            if (score == null) {
+                return new SimpleStringProperty(winRate + "%");
+            }
+            return new SimpleStringProperty(score + " / " + winRate + "%");
+        });
+
+        TableColumn<ManualRecord, String> qualityCol = (TableColumn<ManualRecord, String>) recordTable.getColumns().get(3);
+        qualityCol.setCellValueFactory(cellData -> new SimpleStringProperty(
+                cellData.getValue().getReview() == null ? "" : cellData.getValue().getReview()));
+        qualityCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                getStyleClass().removeAll(REVIEW_STYLE_CLASSES);
+                if (empty || getTableRow() == null || getTableRow().getItem() == null) {
+                    setText(null);
+                    setTooltip(null);
+                    return;
+                }
+                ManualRecord record = (ManualRecord) getTableRow().getItem();
+                setText(record.getReview());
+                if (record.getReviewLevel() > 0) {
+                    String style = reviewStyleClass(record.getReviewLevel());
+                    if (style != null) {
+                        getStyleClass().add(style);
+                    }
+                }
+                if (StringUtils.isNotEmpty(record.getReview()) && record.getWinRateDrop() != null) {
+                    setTooltip(new Tooltip("胜率波动 " + record.getWinRateDrop().negate() + " %"));
+                } else {
+                    setTooltip(null);
+                }
+            }
+        });
+
+        TableColumn<ManualRecord, String> bestMoveCol = (TableColumn<ManualRecord, String>) recordTable.getColumns().get(4);
+        bestMoveCol.setCellValueFactory(cellData -> new SimpleStringProperty(
+                cellData.getValue().getBestMove() == null ? "" : cellData.getValue().getBestMove()));
 
         subRecordTable.setCellFactory(lv -> {
             ListCell<ManualRecord> cell = new ListCell<>() {
@@ -476,42 +527,6 @@ public class ChessManualHandle {
         }
     }
 
-    public void scoreButtonClick(ActionEvent actionEvent) {
-        TextInputDialog d = new TextInputDialog("300");
-        d.setTitle("棋谱打分");
-        d.setHeaderText("请设置每步打分时间(毫秒)，建议不低于300");
-        d.setContentText("");
-        d.initOwner(App.getMainStage());
-        d.showAndWait().ifPresent(s -> {
-            if (s.trim().isEmpty()) return;
-            long delay = Long.parseLong(s.trim());
-            if (delay <= 0) return;
-
-            if (manualPlayTimeline != null && manualPlayTimeline.getStatus() == Animation.Status.RUNNING) {
-                manualPlayTimeline.stop();
-            }
-            manualPlayTimeline = new Timeline(new KeyFrame(Duration.millis(delay), e -> {
-                int size = recordTable.getItems().size();
-                if (p < size - 1) {
-                    manualButtonClick(9);
-                } else {
-                    manualPlayTimeline.stop();
-                }
-            }));
-            manualPlayTimeline.statusProperty().addListener((obs, old, status) -> {
-                if (status == Animation.Status.STOPPED) {
-                    this.cb.turnOffAnalysisMode();
-                    this.cb.refreshLineChart();
-                }
-            });
-            manualPlayTimeline.setCycleCount(Animation.INDEFINITE);
-
-            manualButtonClick(1);
-            this.cb.turnOnAnalysisMode();
-            manualPlayTimeline.play();
-        });
-    }
-
     public void playButtonClick(ActionEvent event) {
         if (p == recordTable.getItems().size() - 1) {
             return;
@@ -532,6 +547,85 @@ public class ChessManualHandle {
         manualPlayTimeline.play();
     }
 
+    /**
+     * 复盘评价对应的样式类。
+     */
+    private static final List<String> REVIEW_STYLE_CLASSES = List.of(
+            "review-best", "review-excellent", "review-good",
+            "review-inaccuracy", "review-mistake", "review-blunder");
+
+    private static String reviewStyleClass(int level) {
+        switch (level) {
+            case 1:
+                return "review-best";
+            case 2:
+                return "review-excellent";
+            case 3:
+                return "review-good";
+            case 4:
+                return "review-inaccuracy";
+            case 5:
+                return "review-mistake";
+            case 6:
+                return "review-blunder";
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * 获取当前棋谱主变，第 0 个为开始局面。
+     */
+    public List<ManualRecord> getMainLineRecords() {
+        return new ArrayList<>(recordTable.getItems());
+    }
+
+    /**
+     * 应用开始局面的复盘分数。
+     */
+    public void applyReviewScore(int index, int score, BigDecimal winRate) {
+        if (index < 0 || index >= recordTable.getItems().size()) {
+            return;
+        }
+        ManualRecord record = recordTable.getItems().get(index);
+        record.setScore(score);
+        record.setWinRateBottom(winRate);
+        recordTable.refresh();
+    }
+
+    /**
+     * 应用一步复盘结果。
+     */
+    public void applyReview(int index, ReviewItem item) {
+        if (index < 0 || index >= recordTable.getItems().size()) {
+            return;
+        }
+        ManualRecord record = recordTable.getItems().get(index);
+        record.setReview(item.getQuality().getLabel());
+        record.setReviewLevel(item.getQuality().getLevel());
+        record.setBestMove(item.getBestCnMove());
+        record.setLoss(item.getLoss());
+        record.setScore(item.getEval());
+        record.setWinRateDrop(item.getWinRateDrop());
+        record.setWinRateBottom(item.getWinRateBottom());
+        recordTable.refresh();
+    }
+
+    /**
+     * 清空复盘结果。
+     */
+    public void clearReview() {
+        for (ManualRecord record : recordTable.getItems()) {
+            record.setReview(null);
+            record.setReviewLevel(0);
+            record.setBestMove(null);
+            record.setLoss(null);
+            record.setWinRateDrop(null);
+            record.setWinRateBottom(null);
+        }
+        recordTable.refresh();
+    }
+
     public void setScore(Integer score, Integer mate) {
         int s;
         if (mate != null) {
@@ -541,6 +635,8 @@ public class ChessManualHandle {
         }
         ManualRecord currentRecord = recordTable.getItems().get(p);
         currentRecord.setScore(s);
+        // 引擎分析时把分值按同一套 Elo 公式换算成胜率，显示在“分数/胜率”列
+        currentRecord.setWinRateBottom(GameReview.eloToWinRate(s));
         refreshRecordView(currentRecord, null);
     }
 

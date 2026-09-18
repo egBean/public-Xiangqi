@@ -31,7 +31,7 @@ public class DefaultBoardRender extends BaseBoardRender {
 
 
     @Override
-    public void drawPieces(int pos, int piece, char[][] board, boolean isReverse, ChessBoard.BoardSize style) {
+    public void drawPieces(int pos, int piece, char[][] board, boolean isReverse, ChessBoard.BoardSize style,boolean pieceShadow,double pieceScale) {
         if (font == null || fontSize != getFontSize(style)) {
             fontSize = getFontSize(style);
             font = Font.loadFont(getClass().getResourceAsStream("/font/chessman.ttf"), fontSize);

@@ -36,11 +36,27 @@ public class ColorSettingController {
     private ColorPicker branchStepNumberColor;
 
     @FXML
+    private RadioButton shadowPiece;
+    @FXML
+    private RadioButton noShadowPiece;
+
+    @FXML
     private RadioButton lightTheme;
     @FXML
     private RadioButton darkTheme;
     @FXML
     private Button saveButton;
+
+    @FXML private Spinner<Double> pieceOffsetX;
+    @FXML private Spinner<Double> pieceOffsetY;
+
+    @FXML private Spinner<Integer> boardOffsetX;
+
+    @FXML private Spinner<Double> pieceScale;
+
+    // 默认偏移量（相对棋子半径的比例）
+    private static final double DEFAULT_OFFSET_X = 0.0;
+    private static final double DEFAULT_OFFSET_Y = 0.0;
 
     private final Properties prop = Properties.getInstance();
     private boolean saved;
@@ -63,6 +79,18 @@ public class ColorSettingController {
         } else {
             lightTheme.setSelected(true);
         }
+
+        if (prop.getPieceShadow() == 0) {
+            noShadowPiece.setSelected(true);
+        } else {
+            shadowPiece.setSelected(true);
+        }
+        configureOpacityDouble(pieceOffsetX, prop.getPieceOffsetX(),-1.0,1.0);
+        configureOpacityDouble(pieceOffsetY, prop.getPieceOffsetY(),-1.0,1.0);
+
+        configureBoardOffset(boardOffsetX, prop.getBoardOffsetX(),1000);
+
+        configureOpacityDouble(pieceScale, prop.getPieceScale(),0.1,2.0);
     }
 
     @FXML
@@ -92,6 +120,19 @@ public class ColorSettingController {
     }
 
     @FXML
+    private void resetPieceShadow() {
+        noShadowPiece.setSelected(true);
+    }
+
+    @FXML
+    public void resetPieceOffset() {
+        pieceOffsetX.getValueFactory().setValue(DEFAULT_OFFSET_X);
+        pieceOffsetY.getValueFactory().setValue(DEFAULT_OFFSET_Y);
+        boardOffsetX.getValueFactory().setValue(0);
+        pieceScale.getValueFactory().setValue(1.00);
+    }
+
+    @FXML
     private void save() {
         prop.setFirstStepColor(toHex(firstStepColor.getValue()));
         prop.setFirstStepOpacity(toOpacity(firstStepOpacity));
@@ -106,7 +147,15 @@ public class ColorSettingController {
         prop.setBranchStepNumberColor(toHex(branchStepNumberColor.getValue()));
 
         prop.setColorTheme(darkTheme.isSelected() ? Properties.ColorTheme.DARK : Properties.ColorTheme.LIGHT);
+        prop.setPieceShadow(noShadowPiece.isSelected()?0: 1);
+
+        prop.setPieceOffsetX(pieceOffsetX.getValue()==null?0:pieceOffsetX.getValue());
+        prop.setPieceOffsetY(pieceOffsetY.getValue()==null?0:pieceOffsetY.getValue());
+
+        prop.setPieceScale(pieceScale.getValue()==null?0:pieceScale.getValue());
+        prop.setBoardOffsetX(boardOffsetX.getValue() == null ? 0 : boardOffsetX.getValue());
         prop.save();
+
         saved = true;
         close();
     }
@@ -124,6 +173,25 @@ public class ColorSettingController {
         spinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, toPercent(opacity), 5));
         spinner.getEditor().setTextFormatter(new javafx.scene.control.TextFormatter<>(change ->
                 change.getControlNewText().matches("\\d{0,3}") ? change : null));
+    }
+
+    private void configureBoardOffset(Spinner<Integer> spinner, Integer opacity,Integer maxLimit) {
+        spinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, maxLimit, opacity, 5));
+        spinner.getEditor().setTextFormatter(new javafx.scene.control.TextFormatter<>(change ->
+                change.getControlNewText().matches("\\d{0,4}") ? change : null));
+    }
+
+
+    private void configureOpacityDouble(Spinner<Double> spinner, double value,Double minLimit,Double maxLimit) {
+        spinner.setValueFactory(new SpinnerValueFactory.DoubleSpinnerValueFactory(minLimit, maxLimit, value, 0.01));
+        spinner.getEditor().setTextFormatter(new javafx.scene.control.TextFormatter<>(change -> {
+            String newText = change.getControlNewText();
+            // 允许：空、负号、纯数字、带小数点的数字（最多两位小数）
+            if (newText.isEmpty() || newText.equals("-") || newText.equals(".") || newText.equals("-.")) {
+                return change;
+            }
+            return newText.matches("-?\\d{0,1}(\\.\\d{0,2})?") ? change : null;
+        }));
     }
 
     private int toPercent(double opacity) {

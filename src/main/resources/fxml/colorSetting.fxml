@@ -15,82 +15,169 @@
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.control.ScrollPane?>
 
-<BorderPane prefHeight="350.0" prefWidth="650.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sojourners.chess.controller.ColorSettingController">
+<BorderPane prefHeight="600.0" prefWidth="650.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sojourners.chess.controller.ColorSettingController">
     <center>
-        <VBox maxHeight="-Infinity" minHeight="-Infinity" prefHeight="282.0" prefWidth="650.0" spacing="14.0" BorderPane.alignment="CENTER">
-            <padding>
-                <Insets bottom="12.0" left="18.0" right="18.0" top="16.0" />
-            </padding>
-            <Label text="棋步与分支箭头">
-                <font>
-                    <Font size="15.0" />
-                </font>
-            </Label>
-            <GridPane hgap="12.0" vgap="10.0">
-                <columnConstraints>
-                    <ColumnConstraints halignment="RIGHT" minWidth="90.0" />
-                    <ColumnConstraints halignment="CENTER" minWidth="125.0" />
-                    <ColumnConstraints halignment="CENTER" minWidth="100.0" />
-                    <ColumnConstraints halignment="CENTER" minWidth="125.0" />
-                    <ColumnConstraints halignment="CENTER" minWidth="90.0" />
-                </columnConstraints>
-                <Label text="类型" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                <Label text="箭头颜色" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-                <Label text="透明度 (%)" GridPane.columnIndex="2" GridPane.rowIndex="0" />
-                <Label text="数字颜色" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+        <!-- 使用 ScrollPane 包裹内容，并让宽度自适应 -->
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" style="-fx-background-color: transparent;">
+            <content>
+                <!-- 去掉了 prefHeight="282.0" 和 minHeight="-Infinity"，让高度根据内容自动计算 -->
+                <VBox maxHeight="-Infinity" prefWidth="650.0" spacing="14.0" BorderPane.alignment="CENTER">
+                    <padding>
+                        <Insets bottom="12.0" left="18.0" right="18.0" top="16.0" />
+                    </padding>
+                    <Label text="棋步与分支箭头">
+                        <font>
+                            <Font size="15.0" />
+                        </font>
+                    </Label>
+                    <GridPane hgap="12.0" vgap="10.0">
+                        <columnConstraints>
+                            <ColumnConstraints halignment="RIGHT" minWidth="90.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="125.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="100.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="125.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="90.0" />
+                        </columnConstraints>
+                        <Label text="类型" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Label text="箭头颜色" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        <Label text="透明度 (%)" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+                        <Label text="数字颜色" GridPane.columnIndex="3" GridPane.rowIndex="0" />
 
-                <Label text="棋步提示1" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                <ColorPicker fx:id="firstStepColor" prefWidth="120.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                <Spinner fx:id="firstStepOpacity" editable="true" prefWidth="90.0" GridPane.columnIndex="2" GridPane.rowIndex="1" />
-                <ColorPicker fx:id="firstStepNumberColor" prefWidth="120.0" GridPane.columnIndex="3" GridPane.rowIndex="1" />
-                <Button mnemonicParsing="false" onAction="#resetFirstStep" text="恢复默认" GridPane.columnIndex="4" GridPane.rowIndex="1" />
+                        <Label text="棋步提示1" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <ColorPicker fx:id="firstStepColor" prefWidth="120.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <Spinner fx:id="firstStepOpacity" editable="true" prefWidth="90.0" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                        <ColorPicker fx:id="firstStepNumberColor" prefWidth="120.0" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+                        <Button mnemonicParsing="false" onAction="#resetFirstStep" text="恢复默认" GridPane.columnIndex="4" GridPane.rowIndex="1" />
 
-                <Label text="棋步提示2" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                <ColorPicker fx:id="secondStepColor" prefWidth="120.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-                <Spinner fx:id="secondStepOpacity" editable="true" prefWidth="90.0" GridPane.columnIndex="2" GridPane.rowIndex="2" />
-                <ColorPicker fx:id="secondStepNumberColor" prefWidth="120.0" GridPane.columnIndex="3" GridPane.rowIndex="2" />
-                <Button mnemonicParsing="false" onAction="#resetSecondStep" text="恢复默认" GridPane.columnIndex="4" GridPane.rowIndex="2" />
+                        <Label text="棋步提示2" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <ColorPicker fx:id="secondStepColor" prefWidth="120.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <Spinner fx:id="secondStepOpacity" editable="true" prefWidth="90.0" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+                        <ColorPicker fx:id="secondStepNumberColor" prefWidth="120.0" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+                        <Button mnemonicParsing="false" onAction="#resetSecondStep" text="恢复默认" GridPane.columnIndex="4" GridPane.rowIndex="2" />
 
-                <Label text="变招分支" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-                <ColorPicker fx:id="branchStepColor" prefWidth="120.0" GridPane.columnIndex="1" GridPane.rowIndex="3" />
-                <Spinner fx:id="branchStepOpacity" editable="true" prefWidth="90.0" GridPane.columnIndex="2" GridPane.rowIndex="3" />
-                <ColorPicker fx:id="branchStepNumberColor" prefWidth="120.0" GridPane.columnIndex="3" GridPane.rowIndex="3" />
-                <Button mnemonicParsing="false" onAction="#resetBranchStep" text="恢复默认" GridPane.columnIndex="4" GridPane.rowIndex="3" />
-                <rowConstraints>
-                    <RowConstraints />
-                    <RowConstraints />
-                    <RowConstraints />
-                    <RowConstraints />
-                </rowConstraints>
-            </GridPane>
-            <Separator />
-            <Label text="程序颜色主题">
-                <font>
-                    <Font size="15.0" />
-                </font>
-            </Label>
-            <GridPane hgap="12.0" maxHeight="-Infinity" minHeight="-Infinity" prefHeight="24.0" vgap="10.0">
-                <columnConstraints>
-                    <ColumnConstraints halignment="RIGHT" minWidth="90.0" />
-                    <ColumnConstraints halignment="CENTER" minWidth="125.0" />
-                    <ColumnConstraints halignment="CENTER" minWidth="100.0" />
-                    <ColumnConstraints halignment="CENTER" minWidth="125.0" />
-                    <ColumnConstraints halignment="CENTER" minWidth="90.0" />
-                </columnConstraints>
-                <RadioButton fx:id="lightTheme" mnemonicParsing="false" text="浅色" GridPane.columnIndex="1">
-                    <toggleGroup>
-                        <ToggleGroup fx:id="themeGroup" />
-                    </toggleGroup>
-                </RadioButton>
-                <RadioButton fx:id="darkTheme" mnemonicParsing="false" text="深色" toggleGroup="$themeGroup" GridPane.columnIndex="2" />
-                <Button mnemonicParsing="false" onAction="#resetTheme" text="恢复默认" GridPane.columnIndex="4" />
-                <rowConstraints>
-                    <RowConstraints />
-                </rowConstraints>
-            </GridPane>
-        </VBox>
+                        <Label text="变招分支" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <ColorPicker fx:id="branchStepColor" prefWidth="120.0" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                        <Spinner fx:id="branchStepOpacity" editable="true" prefWidth="90.0" GridPane.columnIndex="2" GridPane.rowIndex="3" />
+                        <ColorPicker fx:id="branchStepNumberColor" prefWidth="120.0" GridPane.columnIndex="3" GridPane.rowIndex="3" />
+                        <Button mnemonicParsing="false" onAction="#resetBranchStep" text="恢复默认" GridPane.columnIndex="4" GridPane.rowIndex="3" />
+                        <rowConstraints>
+                            <RowConstraints />
+                            <RowConstraints />
+                            <RowConstraints />
+                            <RowConstraints />
+                        </rowConstraints>
+                    </GridPane>
+                    <Separator />
+                    <Label text="程序颜色主题">
+                        <font>
+                            <Font size="15.0" />
+                        </font>
+                    </Label>
+                    <GridPane hgap="12.0" maxHeight="-Infinity" minHeight="-Infinity" prefHeight="24.0" vgap="10.0">
+                        <columnConstraints>
+                            <ColumnConstraints halignment="RIGHT" minWidth="90.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="125.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="100.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="125.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="90.0" />
+                        </columnConstraints>
+                        <RadioButton fx:id="lightTheme" mnemonicParsing="false" text="浅色" GridPane.columnIndex="1">
+                            <toggleGroup>
+                                <ToggleGroup fx:id="themeGroup" />
+                            </toggleGroup>
+                        </RadioButton>
+                        <RadioButton fx:id="darkTheme" mnemonicParsing="false" text="深色" toggleGroup="$themeGroup" GridPane.columnIndex="2" />
+                        <Button mnemonicParsing="false" onAction="#resetTheme" text="恢复默认" GridPane.columnIndex="4" />
+                        <rowConstraints>
+                            <RowConstraints />
+                        </rowConstraints>
+                    </GridPane>
+
+                    <Separator />
+                    <Label text="棋子阴影">
+                        <font>
+                            <Font size="15.0" />
+                        </font>
+                    </Label>
+                    <GridPane hgap="12.0" maxHeight="-Infinity" minHeight="-Infinity" prefHeight="24.0" vgap="10.0">
+                        <columnConstraints>
+                            <ColumnConstraints halignment="RIGHT" minWidth="90.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="125.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="100.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="125.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="90.0" />
+                        </columnConstraints>
+                        <RadioButton fx:id="noShadowPiece" mnemonicParsing="false" text="无阴影" GridPane.columnIndex="1">
+                            <toggleGroup>
+                                <ToggleGroup fx:id="shadowGroup" />
+                            </toggleGroup>
+                        </RadioButton>
+                        <RadioButton fx:id="shadowPiece" mnemonicParsing="false" text="带阴影" toggleGroup="$shadowGroup" GridPane.columnIndex="2" />
+                        <Button mnemonicParsing="false" onAction="#resetPieceShadow" text="恢复默认" GridPane.columnIndex="4" />
+                        <rowConstraints>
+                            <RowConstraints />
+                        </rowConstraints>
+                    </GridPane>
+
+                    <Separator />
+                    <Label text="皮肤配置(先对齐棋盘!)">
+                        <font>
+                            <Font size="15.0" />
+                        </font>
+                    </Label>
+                    <GridPane hgap="12.0" maxHeight="-Infinity" minHeight="-Infinity" vgap="10.0">
+                        <columnConstraints>
+                            <ColumnConstraints halignment="RIGHT" minWidth="90.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="125.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="100.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="125.0" />
+                            <ColumnConstraints halignment="CENTER" minWidth="90.0" />
+                        </columnConstraints>
+                        <rowConstraints>
+                            <RowConstraints />
+                            <RowConstraints />
+                            <RowConstraints />
+                        </rowConstraints>
+
+                        <!-- 第 1 行：X 偏移 -->
+                        <Label text="X 偏移" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Spinner fx:id="pieceOffsetX" editable="true" prefWidth="120.0"
+                                 GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        <Label text="(正=右，负=左)" GridPane.columnIndex="2" GridPane.rowIndex="0"
+                               style="-fx-text-fill: gray; -fx-font-size: 11px;" />
+
+                        <!-- 第 2 行：Y 偏移 -->
+                        <Label text="Y 偏移" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <Spinner fx:id="pieceOffsetY" editable="true" prefWidth="120.0"
+                                 GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <Label text="(正=下，负=上)" GridPane.columnIndex="2" GridPane.rowIndex="1"
+                               style="-fx-text-fill: gray; -fx-font-size: 11px;" />
+
+                        <!-- 第 3 行：棋子缩放 -->
+                        <Label text="棋子缩放" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <Spinner fx:id="pieceScale" editable="true" prefWidth="120.0"
+                                 GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <Label text="(0.1 ~ 2.0)" GridPane.columnIndex="2" GridPane.rowIndex="2"
+                               style="-fx-text-fill: gray; -fx-font-size: 11px;" />
+
+                        <Label text="棋盘偏移" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <Spinner fx:id="boardOffsetX" editable="true" prefWidth="120.0"
+                                 GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                        <Label text="棋盘左边距像素点数" GridPane.columnIndex="2" GridPane.rowIndex="3"
+                               style="-fx-text-fill: gray; -fx-font-size: 11px;" />
+
+                        <!-- 恢复默认：跨 3 行 -->
+                        <Button mnemonicParsing="false" onAction="#resetPieceOffset"
+                                text="恢复默认" GridPane.columnIndex="4" GridPane.rowIndex="0"
+                                GridPane.rowSpan="3" />
+                    </GridPane>
+                </VBox>
+            </content>
+        </ScrollPane>
     </center>
+
     <bottom>
         <HBox alignment="CENTER_RIGHT" spacing="10.0" BorderPane.alignment="CENTER">
             <padding>

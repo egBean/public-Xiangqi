@@ -22,6 +22,34 @@ public abstract class BaseBoardRender implements BoardRender {
 
     private static int autoPieceSize;
 
+    // 棋子图片偏移量（相对棋子半径 r 的比例，正数向右/下，负数向左/上）
+    private double pieceOffsetX = 0;
+
+
+    private double boardOffsetX = 0;
+
+    public double getBoardOffsetX() {
+        return boardOffsetX;
+    }
+
+    public double getPieceOffsetX() {
+        return pieceOffsetX;
+    }
+
+
+    public double getPieceOffsetY() {
+        return pieceOffsetY;
+    }
+
+
+    private double pieceOffsetY = 0;
+
+    public void setPieceOffset(double offsetX, double offsetY,double boardOffsetX) {
+        this.pieceOffsetX = offsetX;
+        this.pieceOffsetY = offsetY;
+        this.boardOffsetX = boardOffsetX;
+    }
+
     public BaseBoardRender(Canvas canvas) {
         this.canvas = canvas;
         this.gc = canvas.getGraphicsContext2D();
@@ -31,13 +59,15 @@ public abstract class BaseBoardRender implements BoardRender {
                       boolean stepTip, boolean showMultiPV, List<ChessBoard.MoveTip> moveTips, boolean isReverse, boolean showNumber,
                       boolean manualTip, List<ChessBoard.Step> manualList) {
         Properties prop = Properties.getInstance();
-        int padding = getPadding(boardSize);
-        int piece = getPieceSize(boardSize);
+        int padding = getPadding(boardSize);//10
+        int piece = getPieceSize(boardSize);//60
         int pos = padding + piece / 2;
 
         canvas.setWidth(2 * padding + piece * 9);
         canvas.setHeight(2 * padding + piece * 10);
-
+        //加上这一行！强制清空整个画布 避免切换棋盘大小时异常渲染
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        this.setPieceOffset(prop.getPieceOffsetX(), prop.getPieceOffsetY(),prop.getBoardOffsetX());
         // 绘制背景图片
         drawBackgroundImage(canvas.getWidth(), canvas.getHeight());
         // 绘制棋盘线
@@ -58,7 +88,7 @@ public abstract class BaseBoardRender implements BoardRender {
             drawStepRemark(pos, piece, remark.x, remark.y, false, isReverse, boardSize);
         }
         // 绘制棋子
-        drawPieces(pos, piece, board, isReverse, boardSize);
+        drawPieces(pos, piece, board, isReverse, boardSize,prop.getPieceShadow()==1,prop.getPieceScale());
         // 棋谱变招
         if (manualTip && manualList != null && manualList.size() > 1) {
             for (int i = manualList.size() - 1; i >= 0; i--) {
@@ -105,7 +135,7 @@ public abstract class BaseBoardRender implements BoardRender {
             drawStepRemark(pos, piece, remark.x, remark.y, true, false, boardSize);
         }
         // 绘制棋子
-        drawPieces(pos, piece, board, false, boardSize);
+        drawPieces(pos, piece, board, false, boardSize,false,1.00);
 
     }
 
@@ -342,7 +372,7 @@ public abstract class BaseBoardRender implements BoardRender {
                 return 72;
             }
             case MIDDLE_BOARD: {
-                return 64;
+                return 60;
             }
             case SMALL_BOARD: {
                 return 48;
@@ -351,7 +381,7 @@ public abstract class BaseBoardRender implements BoardRender {
                 return autoPieceSize;
             }
             default: {
-                return 64;
+                return 60;
             }
         }
     }

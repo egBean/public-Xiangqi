@@ -278,3 +278,30 @@
 .dark-theme .axis {
     -fx-tick-label-fill: #c6cec8;
 }
+
+/* 复盘评价颜色 */
+.dark-theme .review-best {
+    -fx-text-fill: #6fd18a;
+    -fx-font-weight: bold;
+}
+
+.dark-theme .review-excellent {
+    -fx-text-fill: #7fd39a;
+}
+
+.dark-theme .review-good {
+    -fx-text-fill: #b6d97a;
+}
+
+.dark-theme .review-inaccuracy {
+    -fx-text-fill: #e8c766;
+}
+
+.dark-theme .review-mistake {
+    -fx-text-fill: #f0a868;
+}
+
+.dark-theme .review-blunder {
+    -fx-text-fill: #f08080;
+    -fx-font-weight: bold;
+}

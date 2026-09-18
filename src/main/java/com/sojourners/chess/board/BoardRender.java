@@ -13,7 +13,7 @@ public interface BoardRender {
 
     void drawStepRemark(int pos, int piece, int x, int y, boolean isPrevStep, boolean isReverse, ChessBoard.BoardSize style);
 
-    void drawPieces(int pos, int piece, char[][] board, boolean isReverse, ChessBoard.BoardSize style);
+    void drawPieces(int pos, int piece, char[][] board, boolean isReverse, ChessBoard.BoardSize style,boolean pieceShadow,double pieceScale);
 
     void drawStepTips(int pos, int piece, int x1, int y1, int x2, int y2, boolean showMultiPV, int pv,
                       boolean isReverse, Color color, double opacity, Color numberColor);

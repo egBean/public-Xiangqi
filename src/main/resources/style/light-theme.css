@@ -14,3 +14,30 @@
 .light-theme .negative-score {
     -fx-text-fill: red;
 }
+
+/* 复盘评价颜色 */
+.light-theme .review-best {
+    -fx-text-fill: #1b7f3b;
+    -fx-font-weight: bold;
+}
+
+.light-theme .review-excellent {
+    -fx-text-fill: #2e9e4f;
+}
+
+.light-theme .review-good {
+    -fx-text-fill: #6d9e2e;
+}
+
+.light-theme .review-inaccuracy {
+    -fx-text-fill: #c99700;
+}
+
+.light-theme .review-mistake {
+    -fx-text-fill: #d2691e;
+}
+
+.light-theme .review-blunder {
+    -fx-text-fill: #c62828;
+    -fx-font-weight: bold;
+}
