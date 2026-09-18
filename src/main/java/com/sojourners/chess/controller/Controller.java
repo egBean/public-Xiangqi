@@ -1199,11 +1199,11 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
     private String getTimeStrategyString() {
         switch (prop.getAnalysisModel()) {
-            case Engine.AnalysisModel.FIXED_TIME:
+            case FIXED_TIME:
                 return "固定时间" + prop.getAnalysisValue() / 1000d + "秒";
-            case Engine.AnalysisModel.FIXED_STEPS:
+            case FIXED_STEPS:
                 return "固定深度" + prop.getAnalysisValue() + "层";
-            case Engine.AnalysisModel.FIXED_NODES:
+            case FIXED_NODES:
                 long nodes = prop.getAnalysisValue();
                 if (nodes > 1000) {
                     nodes /= 1000;
