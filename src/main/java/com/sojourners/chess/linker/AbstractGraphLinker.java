@@ -410,7 +410,22 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                         f = true;
                     }
                 }
+//                if (f && (flag == 1 && XiangqiUtils.canGo(engineBoard, from.x, from.y, to.x, to.y) || flag == 2 && XiangqiUtils.canGo(linkBoard, from.x, from.y, to.x, to.y))) {
+//                    sum++;
+//                    action = new Action(flag, from.y, from.x, to.y, to.x);
+//                }
                 if (f && (flag == 1 && XiangqiUtils.canGo(engineBoard, from.x, from.y, to.x, to.y) || flag == 2 && XiangqiUtils.canGo(linkBoard, from.x, from.y, to.x, to.y))) {
+
+                    if (flag == 2) {
+                        // 引擎走棋时，被移动的棋子必须是引擎方的棋子
+                        // 引擎方颜色：robotBlack=true -> 引擎黑；robotBlack=false -> 引擎红
+                        char movedPiece = linkBoard[from.x][from.y];
+                        boolean movedIsRed = XiangqiUtils.isRed(movedPiece);
+                        boolean engineIsRed = !robotBlack;
+                        if (movedIsRed != engineIsRed) {
+                            continue;
+                        }
+                    }
                     sum++;
                     action = new Action(flag, from.y, from.x, to.y, to.x);
                 }
