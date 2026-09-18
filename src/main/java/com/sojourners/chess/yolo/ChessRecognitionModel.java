@@ -8,6 +8,7 @@ import com.sojourners.chess.util.PathUtils;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -46,7 +47,10 @@ public class ChessRecognitionModel extends OnnxModel {
         try {
             OrtSession.SessionOptions opt = new OrtSession.SessionOptions();
             opt.setIntraOpNumThreads(Properties.getInstance().getLinkThreadNum());
-            poseSession = env.createSession(PathUtils.getJarPath() + "model/pose.onnx", opt);
+            String path = System.getProperty("user.dir")
+                    + File.separator + "model"
+                    + File.separator + "pose.onnx";
+            poseSession = env.createSession(path, opt);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -54,7 +58,7 @@ public class ChessRecognitionModel extends OnnxModel {
 
     @Override
     public String getModelPath() {
-        return "model/reg.onnx";
+        return "reg.onnx";
     }
 
     /**
