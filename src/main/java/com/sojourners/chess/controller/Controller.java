@@ -167,6 +167,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     @FXML
     private Button linkButton;
     @FXML
+    private Button deductionButton;
+    @FXML
     private Button changeTacticButton;
 
     @FXML
@@ -675,7 +677,11 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             engineGo();
         } else {
             doOpenBook();
+            // 未分析时，用棋谱“分数/胜率”列里的胜率回显胜率条
+            applyManualWinRate();
         }
+        // 主棋盘走子后，若推演窗口已打开则同步到最新局面
+        App.syncDeduction(board.getBoard(), redGo, isReverse.getValue());
     }
 
     @Override
@@ -839,6 +845,14 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         } else {
             stopGraphLink();
         }
+    }
+
+    /**
+     * 推演：从当前局面弹出一个独立的小棋盘
+     */
+    @FXML
+    private void deductionButtonClick(ActionEvent e) {
+        App.openDeduction(board.getBoard(), redGo, isReverse.getValue());
     }
 
     private void initLineChart() {
@@ -1022,6 +1036,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         reviewButton.setTooltip(new Tooltip("复盘"));
         changeTacticButton.setTooltip(new Tooltip("变招"));
         linkButton.setTooltip(new Tooltip("连线"));
+        deductionButton.setTooltip(new Tooltip("推演"));
         bookSwitchButton.setTooltip(new Tooltip("启用库招"));
 
     }
@@ -1120,6 +1135,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             if (XiangqiUtils.isReverse(fenCode)) {
                 reverseButtonClick(null);
             }
+            // 若推演窗口已打开，同步到新局面
+            App.syncDeduction(board.getBoard(), redGo, isReverse.getValue());
         }
     }
 
@@ -1162,6 +1179,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         doOpenBook();
 
         System.gc();
+        // 若推演窗口已打开，同步到新局面
+        App.syncDeduction(board.getBoard(), redGo, isReverse.getValue());
     }
 
     private void initEngineView() {
@@ -1403,6 +1422,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
                     if (td.getPv() == 1) {
                         chessManualHandle.setScore(td.getScore(), td.getMate());
+                        // 实时更新棋盘左侧胜率条
+                        board.setWinRate(scoreToWinRate(td.getScore(), td.getMate()));
                     }
                 });
             }
@@ -1431,6 +1452,28 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     private void setScoreStyle(Label label, double score) {
         label.getStyleClass().removeAll("positive-score", "negative-score");
         label.getStyleClass().add(score >= 0 ? "positive-score" : "negative-score");
+    }
+
+    /**
+     * 将引擎分值与绝杀步数换算为棋盘底部一方的胜率（0~1）。
+     * 与棋谱“分数/胜率”列使用同一套 Elo 公式。
+     *
+     * @param score 底部一方视角的分值
+     * @param mate  绝杀步数（可能为 null）
+     * @return 底部一方胜率，范围 0~1
+     */
+    private double scoreToWinRate(Integer score, Integer mate) {
+        if (score == null && mate == null) {
+            return 0.5;
+        }
+        int s;
+        if (mate != null) {
+            int sc = score == null ? 0 : score;
+            s = (sc < 0 ? -30000 : 30000) - sc;
+        } else {
+            s = score;
+        }
+        return GameReview.eloToWinRate(s).doubleValue() / 100d;
     }
 
     @Override
@@ -1493,6 +1536,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
                 reverseButtonClick(null);
             }
             setLinkMode(linkComboBox.getValue());
+            // 若推演窗口已打开，同步到新局面
+            App.syncDeduction(board.getBoard(), redGo, this.isReverse.getValue());
         });
     }
 
@@ -1711,7 +1756,12 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
                 new GameReview.ReviewListener() {
                     @Override
                     public void onStartScore(int recordIndex, int score, java.math.BigDecimal winRate) {
-                        Platform.runLater(() -> chessManualHandle.applyReviewScore(recordIndex, score, winRate));
+                        Platform.runLater(() -> {
+                            chessManualHandle.applyReviewScore(recordIndex, score, winRate);
+                            if (winRate != null) {
+                                board.setWinRate(winRate.doubleValue() / 100d);
+                            }
+                        });
                     }
 
                     @Override
@@ -1719,6 +1769,9 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
                         Platform.runLater(() -> {
                             chessManualHandle.applyReview(recordIndex, item);
                             loadingLabel.setText("复盘中 " + current + "/" + total);
+                            if (item != null && item.getWinRateBottom() != null) {
+                                board.setWinRate(item.getWinRateBottom().doubleValue() / 100d);
+                            }
                         });
                     }
 
@@ -1828,6 +1881,29 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             engineStop();
             // 库招显示
             doOpenBook();
+        }
+        // 没有引擎在分析时，用棋谱“分数/胜率”列里的胜率回显胜率条；
+        // 引擎分析中则以分析结果为准，不覆盖
+        boolean engineActive = robotRed.getValue() && redGo || robotBlack.getValue() && !redGo || robotAnalysis.getValue();
+        if (!engineActive) {
+            applyManualWinRate();
+        }
+        // 若推演窗口已打开，同步到浏览到的局面
+        App.syncDeduction(board.getBoard(), redGo, isReverse.getValue());
+    }
+
+    /**
+     * 用当前棋谱记录的“分数/胜率”列里的胜率更新棋盘左侧胜率条。
+     * 仅当该记录存在胜率时才更新，否则保持当前胜率条不变。
+     */
+    private void applyManualWinRate() {
+        List<ManualRecord> records = chessManualHandle.getMainLineRecords();
+        int index = chessManualHandle.getP();
+        if (index >= 0 && index < records.size()) {
+            java.math.BigDecimal winRate = records.get(index).getWinRateBottom();
+            if (winRate != null) {
+                board.setWinRate(winRate.doubleValue() / 100d);
+            }
         }
     }
 

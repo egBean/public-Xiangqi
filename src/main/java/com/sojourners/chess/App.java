@@ -3,17 +3,20 @@ package com.sojourners.chess;
 import com.sojourners.chess.config.Properties;
 import com.sojourners.chess.controller.ColorSettingController;
 import com.sojourners.chess.controller.Controller;
+import com.sojourners.chess.controller.DeductionController;
 import com.sojourners.chess.controller.EditChessBoardController;
 import com.sojourners.chess.controller.LocalBookController;
 import javafx.application.Application;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Modality;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.stage.WindowEvent;
@@ -36,6 +39,8 @@ public class App extends Application {
     private static Stage bookSetting;
     private static Stage linkSetting;
     private static Stage editChessBoard;
+    private static Stage deduction;
+    private static DeductionController deductionController;
 
     private static final String LIGHT_THEME = themeResource("/style/light-theme.css");
     private static final String DARK_THEME = themeResource("/style/dark-theme.css");
@@ -193,6 +198,103 @@ public class App extends Application {
     }
     public static void closeEditChessBoard() {
         editChessBoard.close();
+    }
+
+    /**
+     * 推演：从当前局面弹出一个独立的小棋盘
+     *
+     * @param board     当前局面
+     * @param redGo     当前行棋方
+     * @param isReverse 是否与主棋盘一致地翻转
+     */
+    public static void openDeduction(char[][] board, boolean redGo, boolean isReverse) {
+        try {
+            // 已存在则先关闭，避免弹窗叠加
+            if (deduction != null && deduction.isShowing()) {
+                deduction.close();
+            }
+            Stage stage = new Stage();
+            FXMLLoader fxmlLoader = new FXMLLoader();
+            fxmlLoader.setLocation(App.class.getResource("/fxml/deduction.fxml"));
+            Parent pane = fxmlLoader.load();
+            Scene scene = new Scene(pane);
+            applyTheme(scene);
+            stage.setScene(scene);
+
+            deduction = stage;
+            deduction.setTitle("推演");
+            deduction.setResizable(false);
+            deduction.initOwner(mainStage);
+
+            DeductionController controller = fxmlLoader.getController();
+            deductionController = controller;
+            controller.init(board, redGo, isReverse);
+
+            deduction.show();
+            positionDeductionStage();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 将推演窗口默认摆放到屏幕横向约 2/3 处（左边缘位于屏幕 2/3 位置），
+     * 尽量不遮挡居中的主棋盘；若放不下则贴屏幕右边缘，并保证不超出屏幕。
+     */
+    private static void positionDeductionStage() {
+        if (deduction == null || mainStage == null) {
+            return;
+        }
+
+        Screen screen;
+        java.util.List<Screen> screens = Screen.getScreensForRectangle(
+                mainStage.getX(), mainStage.getY(), mainStage.getWidth(), mainStage.getHeight());
+        if (!screens.isEmpty()) {
+            screen = screens.get(0);
+        } else {
+            screen = Screen.getPrimary();
+        }
+
+        Rectangle2D bounds = screen.getVisualBounds();
+        // 窗口左边缘放在屏幕横向约 2/3 处
+        double x = bounds.getMinX() + bounds.getWidth() * 5.5 / 11.0;
+        double y = bounds.getMinY() + (bounds.getHeight() - deduction.getHeight()) / 2.0;
+
+        if (x + deduction.getWidth() > bounds.getMaxX()) {
+            x = bounds.getMaxX() - deduction.getWidth();
+        }
+        if (x < bounds.getMinX()) {
+            x = bounds.getMinX();
+        }
+        if (y + deduction.getHeight() > bounds.getMaxY()) {
+            y = bounds.getMaxY() - deduction.getHeight();
+        }
+        if (y < bounds.getMinY()) {
+            y = bounds.getMinY();
+        }
+
+        deduction.setX(x);
+        deduction.setY(y);
+    }
+
+    /**
+     * 主棋盘局面变化时，若推演窗口已打开，则同步到最新局面（等同于重新打开推演棋盘，
+     * 会清空推演窗口里的走棋数据）。
+     *
+     * @param board     最新局面
+     * @param redGo     最新行棋方
+     * @param isReverse 是否翻转
+     */
+    public static void syncDeduction(char[][] board, boolean redGo, boolean isReverse) {
+        if (deduction != null && deduction.isShowing() && deductionController != null) {
+            deductionController.resetTo(board, redGo, isReverse);
+        }
+    }
+
+    public static void closeDeduction() {
+        if (deduction != null) {
+            deduction.close();
+        }
     }
 
     public static boolean openColorSetting() {

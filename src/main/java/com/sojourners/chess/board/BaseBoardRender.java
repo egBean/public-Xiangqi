@@ -118,6 +118,57 @@ public abstract class BaseBoardRender implements BoardRender {
         }
     }
 
+    /**
+     * 绘制棋盘左侧胜率条。
+     * 未翻转时下方为红方、上方为黑方；翻转后上下互换。
+     *
+     * @param pos           棋盘第一行/列的棋子中心坐标
+     * @param piece         棋子大小
+     * @param padding       棋盘边距
+     * @param bottomWinRate 棋盘底部一方的胜率（0~1）
+     * @param isReverse     棋盘是否翻转
+     */
+    public void drawWinRateBar(int pos, int piece, int padding, double bottomWinRate, boolean isReverse) {
+        if (bottomWinRate < 0) {
+            bottomWinRate = 0;
+        } else if (bottomWinRate > 1) {
+            bottomWinRate = 1;
+        }
+
+        // 宽度与左边距：紧贴棋盘左边、与棋盘等长
+        double w = Math.max(8, piece / 6d);
+        double x = 0;
+        // 贯穿整个棋盘（画布）高度，与棋盘上下对齐
+        double top = 0;
+        double h = canvas.getHeight();
+
+        // 底部一方占据的高度
+        double bottomH = h * bottomWinRate;
+
+        Color red = Color.web("#bf242a");
+        Color black = Color.web("#1c1c1c");
+        Color topColor = isReverse ? red : black;
+        Color bottomColor = isReverse ? black : red;
+
+        gc.save();
+        // 顶部一方
+        gc.setFill(topColor);
+        gc.fillRect(x, top, w, h - bottomH);
+        // 底部一方
+        gc.setFill(bottomColor);
+        gc.fillRect(x, top + h - bottomH, w, bottomH);
+        // 红黑分界线
+        double lineWidth = Math.max(1, piece / 60d);
+        gc.setStroke(Color.web("#dfe4ea"));
+        gc.setLineWidth(lineWidth);
+        gc.strokeLine(x, top + h - bottomH, x + w, top + h - bottomH);
+        // 外边框（内缩半个线宽，避免被画布边缘裁掉）
+        gc.setStroke(Color.web("#5a5a5a"));
+        gc.setLineWidth(lineWidth);
+        gc.strokeRect(x + lineWidth / 2, top + lineWidth / 2, w - lineWidth, h - lineWidth);
+        gc.restore();
+    }
+
     // paint edit chess board demo piece
     public void paintDemoBoard(ChessBoard.BoardSize boardSize, char[][] board, ChessBoard.Point remark) {
         int piece = getPieceSize(boardSize);

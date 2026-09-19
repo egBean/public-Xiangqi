@@ -66,7 +66,7 @@ com.sojourners.chess
 | 文件 | 职责 |
 | --- | --- |
 | `Main.java` | 程序入口，启动 JavaFX 应用 |
-| `App.java` | 主窗口（Stage），管理各设置/管理对话框的打开 |
+| `App.java` | 主窗口（Stage），管理各设置/管理对话框的打开；`openDeduction` 打开推演窗口后在 `positionDeductionStage()` 中将窗口左边缘默认放在屏幕横向约 2/3 处、纵向居中（避免遮挡居中的主棋盘），放不下则贴屏幕右边缘并保证不超出屏幕 |
 
 ### 3.2 board/ — 棋盘与渲染
 
@@ -74,7 +74,7 @@ com.sojourners.chess
 | --- | --- |
 | `ChessBoard.java` | 棋盘核心：局面、走子规则、坐标 |
 | `BoardRender.java` | 棋盘渲染接口 |
-| `BaseBoardRender.java` | 渲染基类（绘制棋盘、棋子、提示等） |
+| `BaseBoardRender.java` | 渲染基类（绘制棋盘、棋子、提示、左侧胜率条等）。胜率条由 `drawWinRateBar(...)` 绘制在棋盘左侧空白区，未翻转时下红上黑，翻转时上下互换 |
 | `DefaultBoardRender.java` | 默认渲染实现 |
 | `CustomBoardRender.java` | 自定义/皮肤渲染实现 |
 
@@ -91,6 +91,7 @@ com.sojourners.chess
 | `LinkSettingController.java` | 连线设置 |
 | `ColorSettingController.java` | 界面/颜色设置 |
 | `EditChessBoardController.java` | 编辑局面 |
+| `DeductionController.java` | 推演窗口：从当前局面弹出的独立小棋盘（自带局面与渲染，支持回退/前进/重置/复制FEN，底部“大小”下拉框可切换 小/中/大/特大 并自动调整窗口尺寸） |
 | `handle/ChessManualHandle.java` | 棋谱操作处理（约 860 行） |
 | `handle/ChessManualCallBack.java` | 棋谱操作回调接口 |
 
@@ -172,7 +173,7 @@ com.sojourners.chess
 
 | 目录 | 内容 |
 | --- | --- |
-| `fxml/` | 界面布局：`app.fxml`、`engineDialog.fxml`、`engineAdd.fxml`、`timeSetting.fxml`、`bookSetting.fxml`、`localBook.fxml`、`linkSetting.fxml`、`colorSetting.fxml`、`editChessBoard.fxml` |
+| `fxml/` | 界面布局：`app.fxml`、`engineDialog.fxml`、`engineAdd.fxml`、`timeSetting.fxml`、`bookSetting.fxml`、`localBook.fxml`、`linkSetting.fxml`、`colorSetting.fxml`、`editChessBoard.fxml`、`deduction.fxml` |
 | `image/` | 图标与按钮图片（含 `BOARD.JPG`、棋子/机器人图标等） |
 | `style/` | CSS 样式：`app.css`、`dark-theme.css`、`light-theme.css`、`table.css`、`combobox.css` 等 |
 | `sound/` | 音效：`move.wav`、`capture.wav`、`check.wav`、`win.wav`、`click.wav` |
@@ -192,6 +193,8 @@ com.sojourners.chess
 - **局面**：编辑局面、FEN 导入导出、局面图片识别。
 - **棋谱**：XQF / PGN / CBR / TXQ 多格式读写；支持一键复盘，逐步给出引擎正着与“最佳/优秀/良好/不精确/失误/大漏”评价，并统计双方准确率。
 - **界面设置**：棋步提示、音效、线路显示、状态栏、棋盘样式与大小。
+- **推演**：工具栏“连线”后的“推演”按钮，通过 `App#openDeduction` 弹出独立小棋盘（`DeductionController` + `deduction.fxml`）。因 `ChessBoard` 的棋局与渲染为静态，推演不复用它，而是维护私有 `char[][]` 并用独立 `BaseBoardRender` 绘制；支持回退/前进/重置/复制FEN，走子校验用 `XiangqiUtils#canGo` 与 `isJiang`（不可送将）；底部“大小”下拉框（`sizeComboBox`）可在 小/中/大/特大（`SMALL/MIDDLE/BIG/LARGE_BOARD`）间切换，切换后 `paint()` 重绘并 `Stage#sizeToScene()` 让窗口自适应。重置会回到进入/最近同步时的局面并清空全部走棋历史；主棋盘发生走子（`goCallBack`/`browseChessRecord`/`newChessBoard`/`linkerInitChessBoard`）时通过 `App#syncDeduction` 调用 `resetTo` 同步到最新局面（等同重新打开推演棋盘）。
+- **胜率条**：棋盘左侧竖直胜率条，贯穿整个棋盘（画布）高度并与棋盘上下对齐。初始红黑各半，未翻转时下红上黑（与棋盘翻转同步）。胜率来源优先级：①引擎分析（`Controller#thinkDetail` 中 `pv==1`）/复盘（`GameReview` 回调）实时结果优先；②无引擎分析时，浏览棋谱或走子（`goCallBack`/`browseChessRecord`）取当前记录“分数/胜率”列（`ManualRecord#getWinRateBottom`）回显，无值则五五开。分值经 `GameReview#eloToWinRate` 换算，绝杀按 ±30000 处理。
 
 ## 7. 构建与运行（参考）
 

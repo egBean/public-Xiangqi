@@ -51,6 +51,11 @@ public class ChessBoard {
 
     private boolean isReverse;
 
+    /**
+     * 棋盘底部一方的胜率（0~1），默认五五开
+     */
+    private double bottomWinRate = 0.5;
+
     public static class Point {
         int x;
         int y;
@@ -431,6 +436,32 @@ public class ChessBoard {
     private void paint() {
         this.boardRender.paint(boardSize, this.board, prevStep, remark, stepTip,
                 showMultiPV, moveTips, isReverse, showNumber, manualTip, manualList);
+        // 胜率条最后绘制，避免被棋盘背景覆盖
+        int padding = boardRender.getPadding(boardSize);
+        int piece = boardRender.getPieceSize(boardSize);
+        int pos = padding + piece / 2;
+        boardRender.drawWinRateBar(pos, piece, padding, bottomWinRate, isReverse);
+    }
+
+    /**
+     * 设置棋盘左侧胜率条（底部一方胜率，0~1）
+     * @param bottomWinRate 底部一方胜率
+     */
+    public void setWinRate(double bottomWinRate) {
+        if (bottomWinRate < 0) {
+            bottomWinRate = 0;
+        } else if (bottomWinRate > 1) {
+            bottomWinRate = 1;
+        }
+        this.bottomWinRate = bottomWinRate;
+        paint();
+    }
+
+    /**
+     * 重置胜率条为五五开
+     */
+    public void resetWinRate() {
+        setWinRate(0.5);
     }
 
     public void refresh() {
@@ -444,6 +475,8 @@ public class ChessBoard {
     public void reverse(boolean isReverse) {
         if (this.isReverse != isReverse) {
             this.isReverse = isReverse;
+            // 翻转后棋盘底/顶方互换，胜率条随之上下互换
+            this.bottomWinRate = 1 - this.bottomWinRate;
             paint();
         }
     }
