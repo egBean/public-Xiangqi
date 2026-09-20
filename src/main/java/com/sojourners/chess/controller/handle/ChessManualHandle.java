@@ -535,7 +535,14 @@ public class ChessManualHandle {
             manualPlayTimeline.stop();
             return;
         }
-        manualPlayTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+        startPlayTimeline();
+    }
+
+    /**
+     * 按照当前速度档位开始/重新开始自动播放。
+     */
+    private void startPlayTimeline() {
+        manualPlayTimeline = new Timeline(new KeyFrame(Duration.seconds(prop.getPlaySpeed().getSeconds()), e -> {
             int size = recordTable.getItems().size();
             if (p < size - 1) {
                 manualButtonClick(9);
@@ -545,6 +552,18 @@ public class ChessManualHandle {
         }));
         manualPlayTimeline.setCycleCount(Animation.INDEFINITE);
         manualPlayTimeline.play();
+    }
+
+    /**
+     * 播放速度档位变化后：若正在播放，则按新速度重新开始。
+     */
+    public void applyPlaySpeedChange() {
+        if (manualPlayTimeline != null && manualPlayTimeline.getStatus() == Animation.Status.RUNNING) {
+            manualPlayTimeline.stop();
+            if (p < recordTable.getItems().size() - 1) {
+                startPlayTimeline();
+            }
+        }
     }
 
     /**

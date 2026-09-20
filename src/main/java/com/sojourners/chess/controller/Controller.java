@@ -107,6 +107,17 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     @FXML
     private RadioMenuItem menuOfAutoFitBoard;
 
+    @FXML
+    private ToggleGroup playSpeedGroup;
+    @FXML
+    private RadioMenuItem menuOfPlaySpeedFastest;
+    @FXML
+    private RadioMenuItem menuOfPlaySpeedFast;
+    @FXML
+    private RadioMenuItem menuOfPlaySpeedMedium;
+    @FXML
+    private RadioMenuItem menuOfPlaySpeedSlow;
+
     /* ============ 棋盘样式相关 ============ */
     @FXML private Menu boardTypeMenu;
     @FXML private ToggleGroup boardTypeGroup;
@@ -435,6 +446,23 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             board.autoFitSize(borderPane.getWidth(), borderPane.getHeight(), splitPane.getDividerPositions()[0]);
         }
     }
+
+    @FXML
+    void playSpeedSelected(ActionEvent event) {
+        RadioMenuItem item = (RadioMenuItem) event.getTarget();
+        if (item.equals(menuOfPlaySpeedFastest)) {
+            prop.setPlaySpeed(Properties.PlaySpeed.FASTEST);
+        } else if (item.equals(menuOfPlaySpeedMedium)) {
+            prop.setPlaySpeed(Properties.PlaySpeed.MEDIUM);
+        } else if (item.equals(menuOfPlaySpeedSlow)) {
+            prop.setPlaySpeed(Properties.PlaySpeed.SLOW);
+        } else {
+            prop.setPlaySpeed(Properties.PlaySpeed.FAST);
+        }
+        prop.save();
+        chessManualHandle.applyPlaySpeedChange();
+    }
+
     @FXML
     void stepTipChecked(ActionEvent event) {
         CheckMenuItem item = (CheckMenuItem) event.getTarget();
@@ -1065,6 +1093,21 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             menuOfAutoFitBoard.setSelected(true);
         } else {
             menuOfSmallBoard.setSelected(true);
+        }
+        // 播放速度
+        switch (prop.getPlaySpeed()) {
+            case FASTEST:
+                menuOfPlaySpeedFastest.setSelected(true);
+                break;
+            case MEDIUM:
+                menuOfPlaySpeedMedium.setSelected(true);
+                break;
+            case SLOW:
+                menuOfPlaySpeedSlow.setSelected(true);
+                break;
+            default:
+                menuOfPlaySpeedFast.setSelected(true);
+                break;
         }
         // 棋盘样式
         initBoardTypeMenu();

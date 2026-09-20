@@ -27,6 +27,7 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
@@ -113,6 +114,18 @@
                                     <RadioMenuItem fx:id="menuOfBigBoard" mnemonicParsing="false" onAction="#boardSizeSelected" text="大棋盘" toggleGroup="$boardStyle" />
                                     <RadioMenuItem fx:id="menuOfLargeBoard" mnemonicParsing="false" onAction="#boardSizeSelected" text="超大棋盘" toggleGroup="$boardStyle" />
                                     <RadioMenuItem fx:id="menuOfAutoFitBoard" mnemonicParsing="false" onAction="#boardSizeSelected" text="自适应" toggleGroup="$boardStyle" />
+                                </items>
+                            </Menu>
+                            <Menu mnemonicParsing="false" text="播放速度">
+                                <items>
+                                    <RadioMenuItem fx:id="menuOfPlaySpeedFastest" mnemonicParsing="false" onAction="#playSpeedSelected" text="超快（1 秒/步）">
+                                        <toggleGroup>
+                                            <ToggleGroup fx:id="playSpeedGroup" />
+                                        </toggleGroup>
+                                    </RadioMenuItem>
+                                    <RadioMenuItem fx:id="menuOfPlaySpeedFast" mnemonicParsing="false" onAction="#playSpeedSelected" text="快（3 秒/步）" toggleGroup="$playSpeedGroup" />
+                                    <RadioMenuItem fx:id="menuOfPlaySpeedMedium" mnemonicParsing="false" onAction="#playSpeedSelected" text="中（5 秒/步）" toggleGroup="$playSpeedGroup" />
+                                    <RadioMenuItem fx:id="menuOfPlaySpeedSlow" mnemonicParsing="false" onAction="#playSpeedSelected" text="慢（10 秒/步）" toggleGroup="$playSpeedGroup" />
                                 </items>
                             </Menu>
                             <MenuItem mnemonicParsing="false" onAction="#colorSettingClick" text="主题配置" />
@@ -209,6 +222,8 @@
                                     <Insets />
                                 </opaqueInsets>
                             </Button>
+                            <!-- 连线与推演之间的空隙 -->
+                            <Region minWidth="36.0" prefWidth="36.0" />
                             <Button fx:id="deductionButton" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#deductionButtonClick" prefHeight="26.0" prefWidth="52.0" style="-fx-pref-width: 52; -fx-pref-height: 26; -fx-background-insets: 0; -fx-padding: 0 6 0 6; -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: #5a3600; -fx-background-color: linear-gradient(to bottom, #ffe9a3 0%, #f3bd3c 48%, #d98f06 100%); -fx-background-radius: 7; -fx-border-color: #a8700a; -fx-border-width: 1; -fx-border-radius: 7; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 5, 0.2, 0, 2);" text="推演" />
                         </items>
                     </ToolBar>
@@ -299,7 +314,7 @@
                                                                                     <Button fx:id="manualBackButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#backButtonClick" prefHeight="24.0" prefWidth="24.0" style="-fx-background-image: url('/image/arrow-left.png');" stylesheets="@../style/app.css" text="Button" />
                                                                                     <Button fx:id="manualForwardButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#forwardButtonClick" prefHeight="24.0" prefWidth="24.0" style="-fx-background-image: url('/image/arrow-right.png');" stylesheets="@../style/app.css" text="Button" />
                                                                                     <Button fx:id="manualFinalButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#finalButtonClick" prefHeight="24.0" prefWidth="24.0" style="-fx-background-image: url('/image/arrow-double-right.png');" stylesheets="@../style/app.css" text="Button" />
-                                                                                    <Button fx:id="reviewButton" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#reviewButtonClick" prefHeight="24.0" prefWidth="48.0" style="-fx-pref-width: 48; -fx-pref-height: 24; -fx-background-insets: 0; -fx-font-size: 11.0;" text="复盘" />
+                                                                                    <Button fx:id="reviewButton" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#reviewButtonClick" prefHeight="24.0" prefWidth="48.0" style="-fx-pref-width: 48; -fx-pref-height: 24; -fx-background-insets: 0; -fx-padding: 0 4 0 4; -fx-font-size: 11.0;" styleClass="flat-tool-button" text="复盘" />
                                                                                     <Button fx:id="manualDeleteButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#deleteButtonClick" prefHeight="24.0" prefWidth="24.0" style="-fx-background-image: url('/image/delete.png');" stylesheets="@../style/app.css" text="Button" />
                                                                                 </items>
                                                                             </ToolBar>

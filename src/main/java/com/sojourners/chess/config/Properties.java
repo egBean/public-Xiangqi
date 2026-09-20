@@ -26,6 +26,11 @@ public class Properties implements Serializable {
     private ChessBoard.BoardSize boardSize;
     private String boardStyle = "default";
 
+    /*
+     * 棋谱自动播放速度档位。
+     */
+    private PlaySpeed playSpeed;
+
     private boolean stepTip;
 
     private boolean stepSound;
@@ -164,6 +169,26 @@ public class Properties implements Serializable {
     public enum ColorTheme {
         LIGHT,
         DARK
+    }
+
+    /**
+     * 棋谱播放速度档位，附带每步的停留秒数。
+     */
+    public enum PlaySpeed {
+        FASTEST(1),
+        FAST(3),
+        MEDIUM(5),
+        SLOW(10);
+
+        private final double seconds;
+
+        PlaySpeed(double seconds) {
+            this.seconds = seconds;
+        }
+
+        public double getSeconds() {
+            return seconds;
+        }
     }
 
 
@@ -518,6 +543,14 @@ public class Properties implements Serializable {
 
     public void setBoardSize(ChessBoard.BoardSize boardSize) {
         this.boardSize = boardSize;
+    }
+
+    public PlaySpeed getPlaySpeed() {
+        return playSpeed == null ? PlaySpeed.FAST : playSpeed;
+    }
+
+    public void setPlaySpeed(PlaySpeed playSpeed) {
+        this.playSpeed = playSpeed;
     }
 
     public boolean isStepTip() {
