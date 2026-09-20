@@ -21,7 +21,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     /**
      * 扫描线程
      */
-    private Thread thread;
+    private volatile Thread thread;
     /**
      * 棋盘区域
      */
@@ -96,6 +96,9 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 sleep(1000);
                 continue;
             }
+            if (Thread.currentThread().isInterrupted()) {
+                return;
+            }
             if (!initChessBoard()) {
                 sleep(1000);
                 continue;
@@ -103,6 +106,9 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
             int count = 0;
             while (!Thread.currentThread().isInterrupted()) {
                 sleep(prop.getLinkScanTime());
+                if (Thread.currentThread().isInterrupted()) {
+                    return;
+                }
                 if (!callBack.isThinking() && !pause) {
 
                     if (!findChessBoard(board2)) {
@@ -126,6 +132,9 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                     if (prop.isLinkAnimation() && needConfirm(board2, callBack.getEngineBoard(), action)) {
                         boolean f = false;
                         do {
+                            if (Thread.currentThread().isInterrupted()) {
+                                return;
+                            }
                             char[][] tmp = board1;
                             board1 = board2;
                             board2 = tmp;
@@ -149,6 +158,9 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                         action = compareBoard(board2, callBack.getEngineBoard(), isReverse, callBack.isWatchMode());
                     }
 
+                    if (Thread.currentThread().isInterrupted()) {
+                        return;
+                    }
                     if (action != null) {
                         System.out.println("action " + action);
 
@@ -444,7 +456,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         try {
             Thread.sleep(time);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            // 正常停止：保留中断标记，由调用方退出扫描流程。
             Thread.currentThread().interrupt();
         }
     }
@@ -618,6 +630,9 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         boolean redGo = !isReverse || "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR".equals(fenCode);
         fenCode = ChessBoard.fenCode(board2, redGo);
         // 回调，初始化棋盘
+        if (Thread.currentThread().isInterrupted()) {
+            return false;
+        }
         callBack.linkerInitChessBoard(fenCode, isReverse);
         return true;
     }
@@ -659,12 +674,13 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     }
 
     /**
-     * 停止连线
+     * 请求停止连线，扫描线程在检查到中断后退出。
      */
     @Override
     public void stop() {
-        if (thread != null && thread.isAlive()) {
-            thread.interrupt();
+        Thread scanThread = this.thread;
+        if (scanThread != null) {
+            scanThread.interrupt();
         }
     }
 
