@@ -1206,7 +1206,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         board = new ChessBoard(this.canvas, prop.getBoardSize(), prop.getBoardStyle(), prop.isStepTip(), prop.isManualTip(),
                 engine != null && engine.getMultiPV() > 1, prop.isStepSound(), prop.isShowNumber(), fenCode);
         // 设置局面
-        redGo = StringUtils.isEmpty(fenCode) ? true : fenCode.contains("w");
+        redGo = StringUtils.isEmpty(fenCode) ? true : !fenCode.contains(" b");
         fenCode = board.fenCode(redGo);
         // 设置棋谱
         if (!fromManual)

@@ -672,7 +672,7 @@ public class ChessManualHandle {
     }
 
     private boolean getRedGo() {
-        boolean redGo = fenCode.contains("w");
+        boolean redGo = !fenCode.contains(" b");
         if (p % 2 != 0) {
             redGo = !redGo;
         }
