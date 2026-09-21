@@ -39,7 +39,8 @@ public class ChessBoard {
                 PathUtils.getJarPath() + "sound/capture.wav",
                 PathUtils.getJarPath() + "sound/check.wav",
                 PathUtils.getJarPath() + "sound/win.wav",
-                PathUtils.getJarPath() + "sound/begin.wav");
+                PathUtils.getJarPath() + "sound/begin.wav",
+                PathUtils.getJarPath() + "sound/undo.wav");
     }
 
     private Point remark;
