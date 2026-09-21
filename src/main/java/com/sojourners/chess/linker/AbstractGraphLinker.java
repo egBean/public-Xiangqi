@@ -541,27 +541,13 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
 
     private boolean findChessBoard(char[][] board) {
-//        if( ThreadLocalRandom.current().nextInt(99)<1) {
-//            //随机刷新一次屏幕坐标
-//            this.findBoardPosition();
-//        }
-        // 截图
         BufferedImage img = screenshot(false);
-        if( ThreadLocalRandom.current().nextInt(9)>=1){
-            boolean result1 = findChessBoardWithModel(img, board, this.aiModel);
-            if(result1){
-                return result1;
-            }
-            //第一个模型识别不出来 尝试使用第二个
-            return findChessBoardWithModel(img, board, this.supportAiModel);
-        }
-        //小概率也尝试使用辅助模型识别
-        boolean result1 = findChessBoardWithModel(img, board, this.supportAiModel);
+        boolean result1 = findChessBoardWithModel(img, board, this.aiModel);
         if(result1){
             return result1;
         }
         //第一个模型识别不出来 尝试使用第二个
-        return findChessBoardWithModel(img, board, this.aiModel);
+        return findChessBoardWithModel(img, board, this.supportAiModel);
     }
 
     private boolean findChessBoardWithModel(BufferedImage img,char[][] board,OnnxModel model){
