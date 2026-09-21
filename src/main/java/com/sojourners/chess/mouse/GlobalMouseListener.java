@@ -6,9 +6,16 @@ import org.jnativehook.NativeHookException;
 import org.jnativehook.mouse.NativeMouseEvent;
 import org.jnativehook.mouse.NativeMouseInputListener;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class GlobalMouseListener implements NativeMouseInputListener {
 
+
+
     private MouseListenCallBack cb;
+
+    private static boolean flag;
 
     public void nativeMouseClicked(NativeMouseEvent e) {
         System.out.println("Mouse Clicked: " + e.getClickCount());
@@ -37,6 +44,13 @@ public class GlobalMouseListener implements NativeMouseInputListener {
     }
 
     public void startListenMouse() throws NativeHookException {
+        if(!flag){
+            Logger logger = Logger.getLogger("org.jnativehook");
+            logger.setLevel(Level.WARNING);
+            logger.setUseParentHandlers(false);
+            flag = true;
+        }
+
         GlobalScreen.registerNativeHook();
         GlobalScreen.addNativeMouseListener(this);
     }
