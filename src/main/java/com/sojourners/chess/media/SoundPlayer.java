@@ -7,6 +7,11 @@ import java.io.File;
 public class SoundPlayer {
     private AudioClip pick;
 
+    /**
+     * 新开局
+     */
+    private AudioClip begin;
+
     private AudioClip move;
 
     private AudioClip eat;
@@ -15,12 +20,13 @@ public class SoundPlayer {
 
     private AudioClip over;
 
-    public SoundPlayer(String pickSound, String moveSound, String eatSound, String checkSound, String overSound) {
+    public SoundPlayer(String pickSound, String moveSound, String eatSound, String checkSound, String overSound,String beginSound) {
         pick = new AudioClip(new File(pickSound).toURI().toString());
         move = new AudioClip(new File(moveSound).toURI().toString());
         eat = new AudioClip(new File(eatSound).toURI().toString());
         check = new AudioClip(new File(checkSound).toURI().toString());
         over = new AudioClip(new File(overSound).toURI().toString());
+        begin = new AudioClip(new File(beginSound).toURI().toString());
     }
 
     public void eat() {
@@ -43,4 +49,7 @@ public class SoundPlayer {
         over.play();
     }
 
+    public void begin() {
+        begin.play();
+    }
 }

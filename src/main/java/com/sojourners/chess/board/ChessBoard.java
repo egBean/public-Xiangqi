@@ -38,7 +38,8 @@ public class ChessBoard {
                 PathUtils.getJarPath() + "sound/move.wav",
                 PathUtils.getJarPath() + "sound/capture.wav",
                 PathUtils.getJarPath() + "sound/check.wav",
-                PathUtils.getJarPath() + "sound/win.wav");
+                PathUtils.getJarPath() + "sound/win.wav",
+                PathUtils.getJarPath() + "sound/begin.wav");
     }
 
     private Point remark;
@@ -156,7 +157,7 @@ public class ChessBoard {
         this.boardSize = bs;
         // 默认不翻转
         isReverse = false;
-
+        sound.begin();
         this.paint();
     }
 
