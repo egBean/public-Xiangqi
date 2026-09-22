@@ -14,6 +14,9 @@ import com.sojourners.chess.model.EngineConfig;
 import com.sojourners.chess.model.ManualRecord;
 import com.sojourners.chess.model.ThinkData;
 import com.sojourners.chess.openbook.OpenBookManager;
+import com.sojourners.chess.review.GameReview;
+import com.sojourners.chess.review.ReviewItem;
+import com.sojourners.chess.review.ReviewSummary;
 import com.sojourners.chess.util.*;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
@@ -31,6 +34,7 @@ import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.*;
 import javafx.scene.control.TextArea;
@@ -41,6 +45,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.util.Callback;
@@ -51,7 +56,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
+import java.util.*;
 import java.util.List;
 
 public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCallBack {
@@ -61,6 +66,10 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
     @FXML
     private BorderPane borderPane;
+    @FXML
+    private StackPane loadingOverlay;
+    @FXML
+    private Label loadingLabel;
     @FXML
     private Label infoShowLabel;
     @FXML
@@ -99,9 +108,21 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     private RadioMenuItem menuOfAutoFitBoard;
 
     @FXML
-    private RadioMenuItem menuOfDefaultBoard;
+    private ToggleGroup playSpeedGroup;
     @FXML
-    private RadioMenuItem menuOfCustomBoard;
+    private RadioMenuItem menuOfPlaySpeedFastest;
+    @FXML
+    private RadioMenuItem menuOfPlaySpeedFast;
+    @FXML
+    private RadioMenuItem menuOfPlaySpeedMedium;
+    @FXML
+    private RadioMenuItem menuOfPlaySpeedSlow;
+
+    /* ============ 棋盘样式相关 ============ */
+    @FXML private Menu boardTypeMenu;
+    @FXML private ToggleGroup boardTypeGroup;
+    @FXML
+    private RadioMenuItem menuOfDefaultBoard;
 
     @FXML
     private CheckMenuItem menuOfStepTip;
@@ -151,9 +172,13 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     @FXML
     private Button immediateButton;
     @FXML
+    private Button reviewButton;
+    @FXML
     private Button bookSwitchButton;
     @FXML
     private Button linkButton;
+    @FXML
+    private Button deductionButton;
     @FXML
     private Button changeTacticButton;
 
@@ -181,9 +206,94 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     private volatile boolean isThinking;
 
     /**
+     * 正在复盘
+     */
+    private volatile boolean reviewing;
+
+    /**
      * 变招列表
      */
     private List<String> tacticList;
+
+
+    /** 当前皮肤，内置默认用 "default" 表示 */
+    private String currentBoardSkin = "default";
+    /** 动态生成的皮肤菜单项 */
+    private final List<RadioMenuItem> skinItems = new ArrayList<>();
+
+
+    /** 扫描 skin 目录并生成菜单项 */
+    private void initBoardTypeMenu() {
+
+        String boardStyle = prop.getBoardStyle();
+
+        // 校验皮肤：非 default 时，如果 skin 目录或对应皮肤目录不存在，则回退 default
+        if (!"default".equalsIgnoreCase(boardStyle)) {
+            File projectSkinDir = new File("skin");
+            File targetSkinDir = new File(projectSkinDir, boardStyle);
+
+            if (!projectSkinDir.isDirectory() || !targetSkinDir.isDirectory()) {
+                boardStyle = "default";
+                prop.setBoardStyle(boardStyle);
+            }
+        }
+
+        currentBoardSkin = boardStyle;
+        // 从皮肤目录读 config.json（没有就创建，默认 0,0,0,1）
+        if (!"default".equalsIgnoreCase(this.currentBoardSkin)) {
+            loadOrCreateSkinConfig(this.currentBoardSkin);
+        }
+
+        menuOfDefaultBoard.setUserData("default");
+        skinItems.add(menuOfAutoFitBoard);
+        File skinDir = resolveSkinDir();
+        if (skinDir != null) {
+            File[] dirs = skinDir.listFiles(File::isDirectory);
+            if (dirs != null) {
+                Arrays.sort(dirs,
+                        Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
+                for (File dir : dirs) {
+                    String name = dir.getName();
+                    if (name.startsWith(".")) continue;   // 跳过隐藏目录
+
+                    RadioMenuItem item = new RadioMenuItem(name);
+                    item.setToggleGroup(boardTypeGroup);
+                    item.setUserData(name);               // 皮肤目录名
+                    item.setOnAction(this::boardTypeSelected);
+                    boardTypeMenu.getItems().add(item);
+                    skinItems.add(item);
+                }
+            }
+        }
+
+        // 恢复上次选择（首次运行就是默认）
+        selectBoardSkin(currentBoardSkin);
+    }
+
+    /** 根据皮肤名恢复单选状态 */
+    private void selectBoardSkin(String skin) {
+        if ("default".equalsIgnoreCase(skin)) {
+            menuOfDefaultBoard.setSelected(true);
+            return;
+        }
+        for (RadioMenuItem item : skinItems) {
+            if (skin.equalsIgnoreCase(item.getText())) {
+                item.setSelected(true);
+                return;
+            }
+        }
+        menuOfDefaultBoard.setSelected(true);
+    }
+
+
+    /** 定位 skin 目录：存在就返回，不存在就创建 */
+    private File resolveSkinDir() {
+        File dir = new File("skin");
+        if (dir.isDirectory()) return dir;
+        if (dir.mkdirs()) return dir;
+        return null;
+    }
+
 
     @FXML
     public void newButtonClick(ActionEvent event) {
@@ -195,14 +305,126 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     }
 
     @FXML
-    void boardStyleSelected(ActionEvent event) {
+    void boardTypeSelected(ActionEvent event) {
         RadioMenuItem item = (RadioMenuItem) event.getTarget();
-        if (item.equals(menuOfDefaultBoard)) {
-            prop.setBoardStyle(ChessBoard.BoardStyle.DEFAULT);
-        } else {
-            prop.setBoardStyle(ChessBoard.BoardStyle.CUSTOM);
+        Object data = item.getUserData();
+        this.currentBoardSkin = data.toString();
+        prop.setBoardStyle(this.currentBoardSkin);
+
+        // 从皮肤目录读 config.json（没有就创建，默认 0,0,0,1）
+        if (this.currentBoardSkin == null || "default".equalsIgnoreCase(this.currentBoardSkin)) {
+            board.setBoardStyle(currentBoardSkin,this.canvas);
+            return;
         }
-        board.setBoardStyle(prop.getBoardStyle(), this.canvas);
+        loadOrCreateSkinConfig(this.currentBoardSkin);
+
+        board.setBoardStyle(currentBoardSkin,this.canvas);
+
+    }
+
+
+    private void writeeSkinConfig(String skin) {
+
+        File skinDir = findSkinDir(skin);
+
+        File cfgFile = new File(skinDir, "config.json");
+
+        String json = String.format(
+                "{%n  \"boardOffsetX\": %d,%n  \"pieceOffsetX\": %s,%n" +
+                        "  \"pieceOffsetY\": %s,%n  \"pieceScale\": %s,%n" +
+                        "  \"pieceShadow\": %d%n}%n",
+                prop.getBoardOffsetX(),
+                prop.getPieceOffsetX(),
+                prop.getPieceOffsetY(),
+                prop.getPieceScale(),
+                prop.getPieceShadow());
+        try {
+            java.nio.file.Files.writeString(
+                    cfgFile.toPath(), json, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    private void loadOrCreateSkinConfig(String skin) {
+
+        File skinDir = findSkinDir(skin);
+        if (skinDir == null) return;
+
+        File cfgFile = new File(skinDir, "config.json");
+
+        if (!cfgFile.exists()) {
+            prop.setBoardOffsetX(0);
+            prop.setPieceOffsetX(0.0);
+            prop.setPieceOffsetY(0.0);
+            prop.setPieceScale(1.0);
+            prop.setPieceShadow(0);
+
+            String json = String.format(
+                    "{%n  \"boardOffsetX\": %d,%n  \"pieceOffsetX\": %s,%n" +
+                            "  \"pieceOffsetY\": %s,%n  \"pieceScale\": %s,%n" +
+                            "  \"pieceShadow\": %d%n}%n",
+                    0, 0, 0, 1, 0);
+            try {
+                java.nio.file.Files.writeString(
+                        cfgFile.toPath(), json, java.nio.charset.StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
+        try {
+            String json = java.nio.file.Files.readString(
+                    cfgFile.toPath(), java.nio.charset.StandardCharsets.UTF_8);
+            prop.setBoardOffsetX((int)readDouble(json, "boardOffsetX", 0));
+            prop.setPieceOffsetX(readDouble(json, "pieceOffsetX", 0));
+            prop.setPieceOffsetY(readDouble(json, "pieceOffsetY", 0));
+            prop.setPieceScale(readDouble(json, "pieceScale",   1));
+            prop.setPieceShadow((int) readDouble(json, "pieceShadow", 0));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private double readDouble(String json, String key, double def) {
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\"" + key + "\"\\s*:\\s*(-?\\d*\\.?\\d+)")
+                .matcher(json);
+        return m.find() ? Double.parseDouble(m.group(1)) : def;
+    }
+
+
+    /** 从 jarPath 往上找 skin/<皮肤名> */
+    private File findSkinDir(String skin) {
+        File dir = new File("skin", skin);
+        if (dir.isDirectory()) return dir;
+
+        if (dir.mkdirs()) return dir;
+        return null;
+    }
+
+    /** 皮肤配置 */
+
+    @FXML
+    void shadow(ActionEvent event) {
+        RadioMenuItem item = (RadioMenuItem) event.getTarget();
+        if (item.equals(menuOfLargeBoard)) {
+            prop.setBoardSize(ChessBoard.BoardSize.LARGE_BOARD);
+        } else if (item.equals(menuOfBigBoard)) {
+            prop.setBoardSize(ChessBoard.BoardSize.BIG_BOARD);
+        } else if (item.equals(menuOfMiddleBoard)) {
+            prop.setBoardSize(ChessBoard.BoardSize.MIDDLE_BOARD);
+        } else if (item.equals(menuOfAutoFitBoard)) {
+            prop.setBoardSize(ChessBoard.BoardSize.AUTOFIT_BOARD);
+        } else {
+            prop.setBoardSize(ChessBoard.BoardSize.SMALL_BOARD);
+        }
+        board.setBoardSize(prop.getBoardSize());
+        if (prop.getBoardSize() == ChessBoard.BoardSize.AUTOFIT_BOARD) {
+            board.autoFitSize(borderPane.getWidth(), borderPane.getHeight(), splitPane.getDividerPositions()[0]);
+        }
     }
 
     @FXML
@@ -224,6 +446,23 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             board.autoFitSize(borderPane.getWidth(), borderPane.getHeight(), splitPane.getDividerPositions()[0]);
         }
     }
+
+    @FXML
+    void playSpeedSelected(ActionEvent event) {
+        RadioMenuItem item = (RadioMenuItem) event.getTarget();
+        if (item.equals(menuOfPlaySpeedFastest)) {
+            prop.setPlaySpeed(Properties.PlaySpeed.FASTEST);
+        } else if (item.equals(menuOfPlaySpeedMedium)) {
+            prop.setPlaySpeed(Properties.PlaySpeed.MEDIUM);
+        } else if (item.equals(menuOfPlaySpeedSlow)) {
+            prop.setPlaySpeed(Properties.PlaySpeed.SLOW);
+        } else {
+            prop.setPlaySpeed(Properties.PlaySpeed.FAST);
+        }
+        prop.save();
+        chessManualHandle.applyPlaySpeedChange();
+    }
+
     @FXML
     void stepTipChecked(ActionEvent event) {
         CheckMenuItem item = (CheckMenuItem) event.getTarget();
@@ -466,7 +705,11 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             engineGo();
         } else {
             doOpenBook();
+            // 未分析时，用棋谱“分数/胜率”列里的胜率回显胜率条
+            applyManualWinRate();
         }
+        // 主棋盘走子后，若推演窗口已打开则同步到最新局面
+        App.syncDeduction(board.getBoard(), redGo, isReverse.getValue());
     }
 
     @Override
@@ -604,6 +847,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     void colorSettingClick(ActionEvent e) {
         if (App.openColorSetting()) {
             App.refreshTheme();
+            writeeSkinConfig(this.currentBoardSkin);
             board.refresh();
         }
     }
@@ -629,6 +873,14 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         } else {
             stopGraphLink();
         }
+    }
+
+    /**
+     * 推演：从当前局面弹出一个独立的小棋盘
+     */
+    @FXML
+    private void deductionButtonClick(ActionEvent e) {
+        App.openDeduction(board.getBoard(), redGo, isReverse.getValue());
     }
 
     private void initLineChart() {
@@ -708,7 +960,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
                 manualTitleLabel, recordTable, subRecordTable, remarkText,
                 manualBackButton, manualDeleteButton, manualDownButton, manualFinalButton,
                 manualForwardButton, manualFrontButton, manualPlayButton, manualUpButton,
-                openManualButton, saveManualButton, manualScoreButton, competitionNameText, competitionCityText, competitionDateText,
+                openManualButton, saveManualButton, competitionNameText, competitionCityText, competitionDateText,
                 competitionRedText, competitionBlackText, this);
 
         useOpenBook.setValue(prop.getBookSwitch());
@@ -720,13 +972,18 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
     private void importFromBufferImage(BufferedImage img) {
         char[][] result = graphLinker.findChessBoard(img);
-        if (result != null) {
-            if (!XiangqiUtils.validateChessBoard(result) && !DialogUtils.showConfirmDialog("提示", "检测到局面不合法，可能会导致引擎退出或者崩溃，是否继续？")) {
-                return;
-            }
-            String fenCode = ChessBoard.fenCode(result, true);
-            newFromOriginFen(fenCode);
+        if (result == null || !XiangqiUtils.validateChessBoard(result)) {
+            //如果局面不合法 尝试用辅助模型
+            result = graphLinker.findChessBoardUseSupportModel(img);
         }
+        if (result == null) {
+            return;
+        }
+        if (!XiangqiUtils.validateChessBoard(result) && !DialogUtils.showConfirmDialog("提示", "检测到局面不合法，可能会导致引擎退出或者崩溃，是否继续？")) {
+            return;
+        }
+        String fenCode = ChessBoard.fenCode(result, true);
+        newFromOriginFen(fenCode);
     }
 
     private void importFromImgFile(File f) {
@@ -804,8 +1061,10 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         blackButton.setTooltip(new Tooltip("引擎执黑"));
         analysisButton.setTooltip(new Tooltip("分析模式"));
         immediateButton.setTooltip(new Tooltip("立即出招"));
+        reviewButton.setTooltip(new Tooltip("复盘"));
         changeTacticButton.setTooltip(new Tooltip("变招"));
         linkButton.setTooltip(new Tooltip("连线"));
+        deductionButton.setTooltip(new Tooltip("推演"));
         bookSwitchButton.setTooltip(new Tooltip("启用库招"));
 
     }
@@ -835,12 +1094,23 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         } else {
             menuOfSmallBoard.setSelected(true);
         }
-        // 棋盘样式
-        if (prop.getBoardStyle() == ChessBoard.BoardStyle.DEFAULT) {
-            menuOfDefaultBoard.setSelected(true);
-        } else {
-            menuOfCustomBoard.setSelected(true);
+        // 播放速度
+        switch (prop.getPlaySpeed()) {
+            case FASTEST:
+                menuOfPlaySpeedFastest.setSelected(true);
+                break;
+            case MEDIUM:
+                menuOfPlaySpeedMedium.setSelected(true);
+                break;
+            case SLOW:
+                menuOfPlaySpeedSlow.setSelected(true);
+                break;
+            default:
+                menuOfPlaySpeedFast.setSelected(true);
+                break;
         }
+        // 棋盘样式
+        initBoardTypeMenu();
         // 右键菜单
         initBoardContextMenu();
         // 状态栏
@@ -908,6 +1178,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             if (XiangqiUtils.isReverse(fenCode)) {
                 reverseButtonClick(null);
             }
+            // 若推演窗口已打开，同步到新局面
+            App.syncDeduction(board.getBoard(), redGo, isReverse.getValue());
         }
     }
 
@@ -934,7 +1206,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         board = new ChessBoard(this.canvas, prop.getBoardSize(), prop.getBoardStyle(), prop.isStepTip(), prop.isManualTip(),
                 engine != null && engine.getMultiPV() > 1, prop.isStepSound(), prop.isShowNumber(), fenCode);
         // 设置局面
-        redGo = StringUtils.isEmpty(fenCode) ? true : fenCode.contains("w");
+        redGo = StringUtils.isEmpty(fenCode) ? true : !fenCode.contains(" b");
         fenCode = board.fenCode(redGo);
         // 设置棋谱
         if (!fromManual)
@@ -950,6 +1222,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         doOpenBook();
 
         System.gc();
+        // 若推演窗口已打开，同步到新局面
+        App.syncDeduction(board.getBoard(), redGo, isReverse.getValue());
     }
 
     private void initEngineView() {
@@ -958,7 +1232,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         for (int i = 1; i <= Runtime.getRuntime().availableProcessors(); i++) {
             threadComboBox.getItems().add(String.valueOf(i));
         }
-        hashComboBox.getItems().addAll("16", "32", "64", "128", "256", "512", "1024", "2048", "4096");
+        hashComboBox.getItems().addAll( "128", "256", "512", "1024", "2048", "4096");
         // 加载设置
         threadComboBox.setValue(String.valueOf(prop.getThreadNum()));
         hashComboBox.setValue(String.valueOf(prop.getHashSize()));
@@ -975,7 +1249,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         }
 
         linkComboBox.getItems().addAll("自动走棋", "观战模式");
-        linkComboBox.setValue("自动走棋");
+        linkComboBox.setValue("观战模式");
     }
 
     private void refreshEngineComboBox() {
@@ -1191,6 +1465,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
                     if (td.getPv() == 1) {
                         chessManualHandle.setScore(td.getScore(), td.getMate());
+                        // 实时更新棋盘左侧胜率条
+                        board.setWinRate(scoreToWinRate(td.getScore(), td.getMate()));
                     }
                 });
             }
@@ -1199,11 +1475,11 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
     private String getTimeStrategyString() {
         switch (prop.getAnalysisModel()) {
-            case Engine.AnalysisModel.FIXED_TIME:
+            case FIXED_TIME:
                 return "固定时间" + prop.getAnalysisValue() / 1000d + "秒";
-            case Engine.AnalysisModel.FIXED_STEPS:
+            case FIXED_STEPS:
                 return "固定深度" + prop.getAnalysisValue() + "层";
-            case Engine.AnalysisModel.FIXED_NODES:
+            case FIXED_NODES:
                 long nodes = prop.getAnalysisValue();
                 if (nodes > 1000) {
                     nodes /= 1000;
@@ -1219,6 +1495,28 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     private void setScoreStyle(Label label, double score) {
         label.getStyleClass().removeAll("positive-score", "negative-score");
         label.getStyleClass().add(score >= 0 ? "positive-score" : "negative-score");
+    }
+
+    /**
+     * 将引擎分值与绝杀步数换算为棋盘底部一方的胜率（0~1）。
+     * 与棋谱“分数/胜率”列使用同一套 Elo 公式。
+     *
+     * @param score 底部一方视角的分值
+     * @param mate  绝杀步数（可能为 null）
+     * @return 底部一方胜率，范围 0~1
+     */
+    private double scoreToWinRate(Integer score, Integer mate) {
+        if (score == null && mate == null) {
+            return 0.5;
+        }
+        int s;
+        if (mate != null) {
+            int sc = score == null ? 0 : score;
+            s = (sc < 0 ? -30000 : 30000) - sc;
+        } else {
+            s = score;
+        }
+        return GameReview.eloToWinRate(s).doubleValue() / 100d;
     }
 
     @Override
@@ -1281,6 +1579,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
                 reverseButtonClick(null);
             }
             setLinkMode(linkComboBox.getValue());
+            // 若推演窗口已打开，同步到新局面
+            App.syncDeduction(board.getBoard(), redGo, this.isReverse.getValue());
         });
     }
 
@@ -1376,8 +1676,6 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     @FXML
     private Button saveManualButton;
     @FXML
-    private Button manualScoreButton;
-    @FXML
     private TextField competitionNameText;
     @FXML
     private TextField competitionCityText;
@@ -1403,15 +1701,170 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         checkLinkMode();
         chessManualHandle.deleteButtonClick(event);
     }
+
+    /**
+     * 复盘：逐局面分析棋谱，给出正着以及每步的好坏。
+     */
     @FXML
-    void scoreButtonClick(ActionEvent event) {
+    void reviewButtonClick(ActionEvent event) {
         if (engine == null) {
             DialogUtils.showWarningDialog("提示", "引擎未加载");
             return;
         }
+        if (reviewing) {
+            DialogUtils.showWarningDialog("提示", "正在复盘中，请稍候");
+            return;
+        }
+        EngineConfig engineConfig = null;
+        for (EngineConfig ec : prop.getEngineConfigList()) {
+            if (ec.getName().equals(prop.getEngineName())) {
+                engineConfig = ec;
+                break;
+            }
+        }
+        if (engineConfig == null) {
+            DialogUtils.showWarningDialog("提示", "未找到当前引擎配置");
+            return;
+        }
+        List<ManualRecord> records = chessManualHandle.getMainLineRecords();
+        if (records.size() <= 1) {
+            DialogUtils.showWarningDialog("提示", "当前棋谱为空，无法复盘");
+            return;
+        }
 
-        checkLinkMode();
-        chessManualHandle.scoreButtonClick(event);
+        TextInputDialog dialog = new TextInputDialog("500");
+        dialog.setTitle("复盘");
+        dialog.setHeaderText("请设置每步分析时间(毫秒)，最低 500");
+        dialog.setContentText("");
+        dialog.initOwner(App.getMainStage());
+        Optional<String> result = dialog.showAndWait();
+        if (result.isEmpty()) {
+            return;
+        }
+        String value = result.get().trim();
+        if (value.isEmpty()) {
+            return;
+        }
+        long movetime;
+        try {
+            movetime = Long.parseLong(value);
+        } catch (NumberFormatException ex) {
+            return;
+        }
+        if (movetime < 500) {
+            DialogUtils.showWarningDialog("提示", "每步分析时间最低为 500 毫秒");
+            return;
+        }
+
+        // 关闭“引擎走红”“引擎走黑”“引擎分析”，并停止引擎
+        if (linkMode.getValue()) {
+            stopGraphLink();
+        }
+        robotRed.setValue(false);
+        robotBlack.setValue(false);
+        robotAnalysis.setValue(false);
+        redButton.setDisable(false);
+        blackButton.setDisable(false);
+        analysisButton.setDisable(false);
+        immediateButton.setDisable(false);
+        engineStop();
+        chessManualHandle.clearReview();
+
+        reviewing = true;
+        showLoading("复盘准备中...");
+        final EngineConfig config = engineConfig;
+        final boolean reverse = isReverse.getValue();
+        final String reviewFen = chessManualHandle.getFenCode();
+        // 停止引擎后等待 3 秒，确认引擎完全退出后再开始分析
+        Thread.startVirtualThread(() -> {
+            for (int second = 3; second > 0; second--) {
+                final int remain = second;
+                Platform.runLater(() -> loadingLabel.setText("复盘准备中，" + remain + " 秒后开始..."));
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignore) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+            Platform.runLater(() -> startReview(config, reviewFen, records, movetime, reverse));
+        });
+    }
+
+    /**
+     * 真正开始复盘分析。
+     */
+    private void startReview(EngineConfig config, String fenCode, List<ManualRecord> records, long movetime, boolean reverse) {
+        GameReview.start(config, fenCode, records, movetime, reverse,
+                new GameReview.ReviewListener() {
+                    @Override
+                    public void onStartScore(int recordIndex, int score, java.math.BigDecimal winRate) {
+                        Platform.runLater(() -> {
+                            chessManualHandle.applyReviewScore(recordIndex, score, winRate);
+                            if (winRate != null) {
+                                board.setWinRate(winRate.doubleValue() / 100d);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onProgress(int current, int total, int recordIndex, ReviewItem item) {
+                        Platform.runLater(() -> {
+                            chessManualHandle.applyReview(recordIndex, item);
+                            loadingLabel.setText("复盘中 " + current + "/" + total);
+                            if (item != null && item.getWinRateBottom() != null) {
+                                board.setWinRate(item.getWinRateBottom().doubleValue() / 100d);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onFinished(ReviewSummary summary) {
+                        Platform.runLater(() -> {
+                            reviewing = false;
+                            hideLoading();
+                            refreshLineChart();
+                            DialogUtils.showInfoDialog("复盘结果", summary.toText());
+                        });
+                    }
+
+                    @Override
+                    public void onError(Exception e) {
+                        Platform.runLater(() -> {
+                            reviewing = false;
+                            hideLoading();
+                            DialogUtils.showWarningDialog("复盘失败", e.getMessage() == null ? "复盘失败" : e.getMessage());
+                        });
+                    }
+                });
+    }
+
+    /**
+     * 显示全屏 loading 遮罩，并阻止鼠标操作。
+     */
+    private void showLoading(String text) {
+        loadingLabel.setText(text);
+        loadingOverlay.setVisible(true);
+        loadingOverlay.toFront();
+        // 禁止键盘/鼠标等所有交互，避免复盘过程中误操作
+        borderPane.setDisable(true);
+    }
+
+    /**
+     * 隐藏全屏 loading 遮罩。
+     */
+    private void hideLoading() {
+        loadingOverlay.setVisible(false);
+        borderPane.setDisable(false);
+    }
+
+    /**
+     * 复盘结束后，如果引擎原本处于走棋/分析状态，则恢复分析。
+     */
+    private void resumeEngineIfNeeded() {
+        if (robotRed.getValue() && redGo || robotBlack.getValue() && !redGo || robotAnalysis.getValue()) {
+            engineGo();
+        }
     }
     @FXML
     void playButtonClick(ActionEvent event) {
@@ -1471,6 +1924,29 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             engineStop();
             // 库招显示
             doOpenBook();
+        }
+        // 没有引擎在分析时，用棋谱“分数/胜率”列里的胜率回显胜率条；
+        // 引擎分析中则以分析结果为准，不覆盖
+        boolean engineActive = robotRed.getValue() && redGo || robotBlack.getValue() && !redGo || robotAnalysis.getValue();
+        if (!engineActive) {
+            applyManualWinRate();
+        }
+        // 若推演窗口已打开，同步到浏览到的局面
+        App.syncDeduction(board.getBoard(), redGo, isReverse.getValue());
+    }
+
+    /**
+     * 用当前棋谱记录的“分数/胜率”列里的胜率更新棋盘左侧胜率条。
+     * 仅当该记录存在胜率时才更新，否则保持当前胜率条不变。
+     */
+    private void applyManualWinRate() {
+        List<ManualRecord> records = chessManualHandle.getMainLineRecords();
+        int index = chessManualHandle.getP();
+        if (index >= 0 && index < records.size()) {
+            java.math.BigDecimal winRate = records.get(index).getWinRateBottom();
+            if (winRate != null) {
+                board.setWinRate(winRate.doubleValue() / 100d);
+            }
         }
     }
 

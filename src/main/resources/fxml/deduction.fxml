@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sojourners.chess.controller.DeductionController">
+    <center>
+        <Canvas fx:id="canvas" onMouseClicked="#canvasClick" />
+    </center>
+    <bottom>
+        <HBox alignment="CENTER" prefHeight="56.0" spacing="6.0" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets bottom="8.0" top="14.0" left="12.0" right="12.0" />
+            </padding>
+            <children>
+                <Button fx:id="undoButton" mnemonicParsing="false" onAction="#undoButtonClick" prefHeight="27.0" prefWidth="60.0" text="回退" />
+                <Button fx:id="redoButton" mnemonicParsing="false" onAction="#redoButtonClick" prefHeight="27.0" prefWidth="60.0" text="前进" />
+                <Button fx:id="resetButton" mnemonicParsing="false" onAction="#resetButtonClick" prefHeight="27.0" prefWidth="56.0" text="重置" />
+                <Button fx:id="copyFenButton" mnemonicParsing="false" onAction="#copyFenButtonClick" prefHeight="27.0" prefWidth="72.0" text="复制FEN" />
+                <Button fx:id="closeButton" mnemonicParsing="false" onAction="#closeButtonClick" prefHeight="27.0" prefWidth="56.0" text="关闭" />
+
+                <!-- 占满中间剩余空间，把“大小”和 ComboBox 推到最右边 -->
+                <Region minWidth="20.0" HBox.hgrow="ALWAYS" />
+
+                <Label text="大小" />
+                <ComboBox fx:id="sizeComboBox" onAction="#sizeComboBoxChanged" prefHeight="27.0" prefWidth="76.0" />
+            </children>
+        </HBox>
+    </bottom>
+</BorderPane>

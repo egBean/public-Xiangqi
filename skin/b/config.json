@@ -1,0 +1,7 @@
+{
+  "boardOffsetX": 60,
+  "pieceOffsetX": 0.15,
+  "pieceOffsetY": 0.15,
+  "pieceScale": 1.1,
+  "pieceShadow": 0
+}

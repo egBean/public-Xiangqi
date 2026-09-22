@@ -74,11 +74,11 @@ public class Engine {
         reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
         writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
 
-        thread = Thread.startVirtualThread(() -> {
+        thread = Thread.ofVirtual().start(() -> {
             try {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    System.out.println(line);
+//                    System.out.println(line);
                     if (line.contains("depth") || line.contains("nps")) {
                         thinkDetail(line);
                     } else if (line.contains("bestmove")) {
@@ -291,7 +291,7 @@ public class Engine {
             if (Properties.getInstance().getBookSwitch()) {
                 long s = System.currentTimeMillis();
                 List<BookData> results = OpenBookManager.getInstance().queryBook(board, redGo, moves.size() / 2 >= Properties.getInstance().getOffManualSteps());
-                System.out.println("查询库时间" + (System.currentTimeMillis() - s));
+//                System.out.println("查询库时间" + (System.currentTimeMillis() - s));
                 this.cb.showBookResults(results);
                 if (results.size() > 0 && this.analysisModel != AnalysisModel.INFINITE) {
                     if (Properties.getInstance().getBookDelayEnd() > 0 && Properties.getInstance().getBookDelayEnd() >= Properties.getInstance().getBookDelayStart()) {
@@ -358,7 +358,7 @@ public class Engine {
     }
 
     private void cmd(String command) {
-        System.out.println(command);
+//        System.out.println(command);
         try {
             writer.write(command + System.getProperty("line.separator"));
             writer.flush();

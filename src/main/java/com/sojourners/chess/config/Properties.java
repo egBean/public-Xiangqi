@@ -24,7 +24,12 @@ public class Properties implements Serializable {
     private static Properties prop;
 
     private ChessBoard.BoardSize boardSize;
-    private ChessBoard.BoardStyle boardStyle = ChessBoard.BoardStyle.DEFAULT;
+    private String boardStyle = "default";
+
+    /*
+     * 棋谱自动播放速度档位。
+     */
+    private PlaySpeed playSpeed;
 
     private boolean stepTip;
 
@@ -71,6 +76,46 @@ public class Properties implements Serializable {
 
     private Integer offManualSteps;
 
+    private Double pieceOffsetX;
+
+    private Integer boardOffsetX;
+
+    public Integer getBoardOffsetX() {
+        return boardOffsetX == null? 0 : boardOffsetX;
+    }
+
+    public void setBoardOffsetX(Integer boardOffsetX) {
+        this.boardOffsetX = boardOffsetX;
+    }
+
+    public Double getPieceOffsetX() {
+        return pieceOffsetX == null? 0:pieceOffsetX;
+    }
+
+    public void setPieceOffsetX(Double pieceOffsetX) {
+        this.pieceOffsetX = pieceOffsetX;
+    }
+
+    public Double getPieceOffsetY() {
+        return pieceOffsetY == null? 0:pieceOffsetY;
+    }
+
+    public void setPieceOffsetY(Double pieceOffsetY) {
+        this.pieceOffsetY = pieceOffsetY;
+    }
+
+    private Double pieceOffsetY;
+
+    private Double pieceScale;
+
+    public Double getPieceScale() {
+        return pieceScale==null ? 1.00: pieceScale;
+    }
+
+    public void setPieceScale(Double pieceScale) {
+        this.pieceScale = pieceScale;
+    }
+
     private MoveRule moveRule;
 
     private Boolean bookSwitch;
@@ -83,6 +128,7 @@ public class Properties implements Serializable {
 
     private int mouseClickDelay = 2;
     private int mouseMoveDelay = 0;
+    private String linkAiModel;
     /*
      * 显示棋谱管理
      */
@@ -110,10 +156,41 @@ public class Properties implements Serializable {
 
     private ColorTheme colorTheme;
 
+    private int pieceShadow;
+
+    public int getPieceShadow() {
+        return pieceShadow;
+    }
+
+    public void setPieceShadow(int pieceShadow) {
+        this.pieceShadow = pieceShadow;
+    }
+
     public enum ColorTheme {
         LIGHT,
         DARK
     }
+
+    /**
+     * 棋谱播放速度档位，附带每步的停留秒数。
+     */
+    public enum PlaySpeed {
+        FASTEST(1),
+        FAST(3),
+        MEDIUM(5),
+        SLOW(10);
+
+        private final double seconds;
+
+        PlaySpeed(double seconds) {
+            this.seconds = seconds;
+        }
+
+        public double getSeconds() {
+            return seconds;
+        }
+    }
+
 
     private Properties(ChessBoard.BoardSize boardSize, boolean stepTip,
                        int threadNum, int hashSize, String engineName, Engine.AnalysisModel analysisModel, long analysisValue,
@@ -171,10 +248,10 @@ public class Properties implements Serializable {
                 try {
                     List<EngineConfig> engineConfigList = new ArrayList<>();
                     prop = new Properties(ChessBoard.BoardSize.AUTOFIT_BOARD, true,
-                            1, 16, "",
+                            1, 128, "",
                             Engine.AnalysisModel.FIXED_TIME, 5000, true,
                             920, 737, 0.64, 0.6,
-                            100, 2, true, true, false,
+                            200, 2, true, true, false,
                             true, true, false, 2000, 9999,
                             MoveRule.BEST_SCORE, true, new ArrayList<>());
                 } catch (Exception e) {
@@ -204,11 +281,11 @@ public class Properties implements Serializable {
         }
     }
 
-    public ChessBoard.BoardStyle getBoardStyle() {
-        return boardStyle;
+    public String getBoardStyle() {
+        return boardStyle == null? "default" : boardStyle;
     }
 
-    public void setBoardStyle(ChessBoard.BoardStyle boardStyle) {
+    public void setBoardStyle(String boardStyle) {
         this.boardStyle = boardStyle;
     }
 
@@ -258,6 +335,14 @@ public class Properties implements Serializable {
 
     public void setMouseMoveDelay(int mouseMoveDelay) {
         this.mouseMoveDelay = mouseMoveDelay;
+    }
+
+    public String getLinkAiModel() {
+        return linkAiModel == null || linkAiModel.isBlank() ? "yolo11" : linkAiModel;
+    }
+
+    public void setLinkAiModel(String linkAiModel) {
+        this.linkAiModel = linkAiModel;
     }
 
     public List<String> getOpenBookList() {
@@ -458,6 +543,14 @@ public class Properties implements Serializable {
 
     public void setBoardSize(ChessBoard.BoardSize boardSize) {
         this.boardSize = boardSize;
+    }
+
+    public PlaySpeed getPlaySpeed() {
+        return playSpeed == null ? PlaySpeed.FAST : playSpeed;
+    }
+
+    public void setPlaySpeed(PlaySpeed playSpeed) {
+        this.playSpeed = playSpeed;
     }
 
     public boolean isStepTip() {

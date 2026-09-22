@@ -7,10 +7,7 @@ import com.sojourners.chess.util.StringUtils;
 import com.sojourners.chess.util.XiangqiUtils;
 import javafx.scene.canvas.Canvas;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 棋盘
@@ -41,7 +38,9 @@ public class ChessBoard {
                 PathUtils.getJarPath() + "sound/move.wav",
                 PathUtils.getJarPath() + "sound/capture.wav",
                 PathUtils.getJarPath() + "sound/check.wav",
-                PathUtils.getJarPath() + "sound/win.wav");
+                PathUtils.getJarPath() + "sound/win.wav",
+                PathUtils.getJarPath() + "sound/begin.wav",
+                PathUtils.getJarPath() + "sound/undo.wav");
     }
 
     private Point remark;
@@ -53,6 +52,11 @@ public class ChessBoard {
     private List<MoveTip> moveTips = new ArrayList<>();
 
     private boolean isReverse;
+
+    /**
+     * 棋盘底部一方的胜率（0~1），默认五五开
+     */
+    private double bottomWinRate = 0.5;
 
     public static class Point {
         int x;
@@ -136,15 +140,11 @@ public class ChessBoard {
         SMALL_BOARD,
         AUTOFIT_BOARD
     }
-    public enum BoardStyle {
-        DEFAULT,
-        CUSTOM;
-    }
 
-    public ChessBoard(Canvas canvas, BoardSize bs, BoardStyle style, boolean stepTip, boolean manualTip,
+    public ChessBoard(Canvas canvas, BoardSize bs, String style, boolean stepTip, boolean manualTip,
                       boolean showMultiPV, boolean stepSound, boolean showNumber, String fenCode) {
         if (this.boardRender == null) {
-            this.boardRender = style == BoardStyle.CUSTOM ? new CustomBoardRender(canvas) : new DefaultBoardRender(canvas);
+            this.boardRender = !Objects.equals(style, "default") ? new CustomBoardRender(canvas,style) : new DefaultBoardRender(canvas);
         }
 
         this.stepTip = stepTip;
@@ -158,7 +158,7 @@ public class ChessBoard {
         this.boardSize = bs;
         // 默认不翻转
         isReverse = false;
-
+        sound.begin();
         this.paint();
     }
 
@@ -212,8 +212,8 @@ public class ChessBoard {
         }
     }
 
-    public void setBoardStyle(BoardStyle style, Canvas canvas) {
-        this.boardRender = style == BoardStyle.CUSTOM ? new CustomBoardRender(canvas) : new DefaultBoardRender(canvas);
+    public void setBoardStyle(String type, Canvas canvas) {
+        this.boardRender = !Objects.equals(type, "default") ? new CustomBoardRender(canvas,type) : new DefaultBoardRender(canvas);
         this.paint();
     }
 
@@ -438,6 +438,32 @@ public class ChessBoard {
     private void paint() {
         this.boardRender.paint(boardSize, this.board, prevStep, remark, stepTip,
                 showMultiPV, moveTips, isReverse, showNumber, manualTip, manualList);
+        // 胜率条最后绘制，避免被棋盘背景覆盖
+        int padding = boardRender.getPadding(boardSize);
+        int piece = boardRender.getPieceSize(boardSize);
+        int pos = padding + piece / 2;
+        boardRender.drawWinRateBar(pos, piece, padding, bottomWinRate, isReverse);
+    }
+
+    /**
+     * 设置棋盘左侧胜率条（底部一方胜率，0~1）
+     * @param bottomWinRate 底部一方胜率
+     */
+    public void setWinRate(double bottomWinRate) {
+        if (bottomWinRate < 0) {
+            bottomWinRate = 0;
+        } else if (bottomWinRate > 1) {
+            bottomWinRate = 1;
+        }
+        this.bottomWinRate = bottomWinRate;
+        paint();
+    }
+
+    /**
+     * 重置胜率条为五五开
+     */
+    public void resetWinRate() {
+        setWinRate(0.5);
     }
 
     public void refresh() {
@@ -451,6 +477,8 @@ public class ChessBoard {
     public void reverse(boolean isReverse) {
         if (this.isReverse != isReverse) {
             this.isReverse = isReverse;
+            // 翻转后棋盘底/顶方互换，胜率条随之上下互换
+            this.bottomWinRate = 1 - this.bottomWinRate;
             paint();
         }
     }

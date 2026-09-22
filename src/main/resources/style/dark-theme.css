@@ -232,6 +232,28 @@
     -fx-border-width: 0 0 0 1px;
 }
 
+/* 与背景色一致的工具条文字按钮（复盘等） */
+.dark-theme .tool-bar .button.flat-tool-button {
+    -fx-background-color: #343a36;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6px;
+    -fx-border-color: #56615a;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1px;
+    -fx-text-fill: #e1e7e3;
+    -fx-font-weight: bold;
+}
+
+.dark-theme .tool-bar .button.flat-tool-button:hover {
+    -fx-background-color: #414a44;
+    -fx-border-color: #718078;
+}
+
+.dark-theme .tool-bar .button.flat-tool-button:pressed {
+    -fx-background-color: #2c322e;
+    -fx-border-color: #4a554f;
+}
+
 .dark-theme .manual-info-pane {
     -fx-background-color: #303632;
 }
@@ -277,4 +299,31 @@
 
 .dark-theme .axis {
     -fx-tick-label-fill: #c6cec8;
+}
+
+/* 复盘评价颜色 */
+.dark-theme .review-best {
+    -fx-text-fill: #6fd18a;
+    -fx-font-weight: bold;
+}
+
+.dark-theme .review-excellent {
+    -fx-text-fill: #7fd39a;
+}
+
+.dark-theme .review-good {
+    -fx-text-fill: #b6d97a;
+}
+
+.dark-theme .review-inaccuracy {
+    -fx-text-fill: #e8c766;
+}
+
+.dark-theme .review-mistake {
+    -fx-text-fill: #f0a868;
+}
+
+.dark-theme .review-blunder {
+    -fx-text-fill: #f08080;
+    -fx-font-weight: bold;
 }

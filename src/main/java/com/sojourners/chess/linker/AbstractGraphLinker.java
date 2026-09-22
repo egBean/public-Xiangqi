@@ -2,7 +2,9 @@ package com.sojourners.chess.linker;
 
 import com.sojourners.chess.board.ChessBoard;
 import com.sojourners.chess.config.Properties;
+import com.sojourners.chess.util.NativeScreenshotUtil;
 import com.sojourners.chess.util.XiangqiUtils;
+import com.sojourners.chess.yolo.ChessRecognitionModel;
 import com.sojourners.chess.yolo.OnnxModel;
 import com.sojourners.chess.yolo.Yolo11Model;
 
@@ -11,6 +13,7 @@ import java.awt.event.InputEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 
 public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
@@ -32,11 +35,12 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     private OnnxModel aiModel;
 
+    private OnnxModel supportAiModel;
+
     private LinkerCallBack callBack;
 
     private Robot robot;
 
-    private int count;
 
     private volatile boolean pause;
 
@@ -45,9 +49,9 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     public AbstractGraphLinker(LinkerCallBack callBack) throws AWTException {
         this.callBack = callBack;
         robot = new Robot();
-        this.count = 0;
-        this.aiModel = new Yolo11Model();
         this.prop = Properties.getInstance();
+        this.aiModel = "yolo11".equalsIgnoreCase(prop.getLinkAiModel()) ? new Yolo11Model() : new ChessRecognitionModel();
+        this.supportAiModel = !"yolo11".equalsIgnoreCase(prop.getLinkAiModel()) ? new Yolo11Model() : new ChessRecognitionModel();
         this.pause = false;
     }
 
@@ -99,6 +103,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 sleep(1000);
                 continue;
             }
+            int count = 0;
             while (!Thread.currentThread().isInterrupted()) {
                 sleep(prop.getLinkScanTime());
                 if (Thread.currentThread().isInterrupted()) {
@@ -119,6 +124,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                     }
 
                     if (isSame(board2, callBack.getEngineBoard())) {
+                        count = 0;
                         continue;
                     }
 
@@ -157,16 +163,20 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                     }
                     if (action != null) {
                         System.out.println("action " + action);
+
                         if (action.flag == 1) {
+                            //目标平台同步我方走棋
                             callBack.linkerMove(action.x1, action.y1, action.x2, action.y2);
 
                         } else if (action.flag == 2) {
+
                             if (isReverse) {
                                 action.y1 = 9 - action.y1;
                                 action.y2 = 9 - action.y2;
                                 action.x1 = 8 - action.x1;
                                 action.x2 = 8 - action.x2;
                             }
+                            //触发目标平台走棋
                             autoClick(action.x1, action.y1, action.x2, action.y2);
 
                         } else if (action.flag == 3) {
@@ -188,6 +198,12 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     }
 
     class Action {
+        /**
+         * 1	目标平台/连线棋盘走了一步，需要同步给引擎	compareBoard() 判断为对方走棋	callBack.linkerMove(...)
+         * 2	引擎走了一步，需要同步到目标平台	compareBoard() 判断为引擎走棋	按 isReverse 转换坐标后 autoClick(...)
+         * 3	确认识别到新棋局/局面差异过大	diff1 > 2 || diff2 >= 2 && diff3 > 2	break 跳出内层，回到外层重新找棋盘、重新初始化
+         * 4	可能识别到新棋局	差异总数 > 2，但没达到 flag=3	count++，连续超过 9 次也 break 重新初始化
+         */
         int flag;
         int x1;
         int y1;
@@ -331,8 +347,18 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
             }
         }
 
-        if (diff1 > 2 || diff2 >= 2 && diff3 > 2) {
+        int total = diff1 + diff2 + diff3;
+        // 无差异：本轮没有任何变化，交给调用方处理
+        if (total == 0) {
+            return null;
+        }
+        //变化太多 直接重新识别棋盘
+        if(total > 4){
             return new Action(3);
+        }
+        // 一步棋必然产生 2 个差异点；其它数量说明是识别错误或新棋局
+        if (total != 2) {
+            return new Action(4);
         }
 
         Action action = null;
@@ -396,7 +422,22 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                         f = true;
                     }
                 }
+//                if (f && (flag == 1 && XiangqiUtils.canGo(engineBoard, from.x, from.y, to.x, to.y) || flag == 2 && XiangqiUtils.canGo(linkBoard, from.x, from.y, to.x, to.y))) {
+//                    sum++;
+//                    action = new Action(flag, from.y, from.x, to.y, to.x);
+//                }
                 if (f && (flag == 1 && XiangqiUtils.canGo(engineBoard, from.x, from.y, to.x, to.y) || flag == 2 && XiangqiUtils.canGo(linkBoard, from.x, from.y, to.x, to.y))) {
+
+                    if (flag == 2) {
+                        // 引擎走棋时，被移动的棋子必须是引擎方的棋子
+                        // 引擎方颜色：robotBlack=true -> 引擎黑；robotBlack=false -> 引擎红
+                        char movedPiece = linkBoard[from.x][from.y];
+                        boolean movedIsRed = XiangqiUtils.isRed(movedPiece);
+                        boolean engineIsRed = !robotBlack;
+                        if (movedIsRed != engineIsRed) {
+                            continue;
+                        }
+                    }
                     sum++;
                     action = new Action(flag, from.y, from.x, to.y, to.x);
                 }
@@ -407,15 +448,8 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
             return action;
         }
 
-//        if (diff1 + diff2 + diff3 == 1) {
-//            return new Action(3);
-//        }
-
-        if (diff1 + diff2 + diff3 > 2) {
-            return new Action(4);
-        }
-
-        return null;
+        // total == 2 但拼不出唯一合法走法 → 也是识别错误，需要重新初始化棋盘
+        return new Action(4);
     }
 
     void sleep(long time) {
@@ -436,7 +470,8 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         if (windowPos.width == 0 || windowPos.height == 0) {
             return null;
         }
-        return robot.createScreenCapture(windowPos);
+        // 使用 JNA 原生截图替换 Robot 的截图，解决高 DPI 模糊和色彩失真问题
+        return NativeScreenshotUtil.capture(windowPos);
     }
 
     /**
@@ -508,8 +543,17 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     private boolean findChessBoard(char[][] board) {
         // 截图
         BufferedImage img = screenshot(false);
+        boolean result1 = findChessBoardWithModel(img, board, this.aiModel);
+        if(result1){
+            return true;
+        }
+        //第一个模型识别不出来 尝试使用第二个
+        return findChessBoardWithModel(img, board, this.supportAiModel);
+    }
+
+    private boolean findChessBoardWithModel(BufferedImage img,char[][] board,OnnxModel model){
         // ai识别棋盘棋子
-        if (!this.aiModel.findChessBoard(img, board)) {
+        if (!model.findChessBoard(img, board)) {
             return false;
         }
         boolean f = XiangqiUtils.validateChessBoard(board);
@@ -523,6 +567,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         }
         return f;
     }
+
     private boolean reverse(char[][] board) throws Exception {
         // 是否翻转
         int rowRedKing = -1, rowBlackKing = -1;
@@ -552,7 +597,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     }
 
     /**
-     * 初始化棋盘局面
+     * 初始化棋盘局面.如果棋盘没有翻转，默认是红走，如果是开始局面，也默认是红走。只是一种猜测，实际上可能棋盘同步时，是轮到黑走
      * @return
      */
     private boolean initChessBoard() {
@@ -630,6 +675,15 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     public char[][] findChessBoard(BufferedImage img) {
         char[][] tmp = new char[10][9];
         if (this.aiModel.findChessBoard(img, tmp)) {
+            return tmp;
+        } else {
+            return null;
+        }
+    }
+
+    public char[][] findChessBoardUseSupportModel(BufferedImage img) {
+        char[][] tmp = new char[10][9];
+        if (this.supportAiModel.findChessBoard(img, tmp)) {
             return tmp;
         } else {
             return null;

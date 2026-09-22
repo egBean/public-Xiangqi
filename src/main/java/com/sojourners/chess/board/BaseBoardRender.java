@@ -22,6 +22,34 @@ public abstract class BaseBoardRender implements BoardRender {
 
     private static int autoPieceSize;
 
+    // 棋子图片偏移量（相对棋子半径 r 的比例，正数向右/下，负数向左/上）
+    private double pieceOffsetX = 0;
+
+
+    private double boardOffsetX = 0;
+
+    public double getBoardOffsetX() {
+        return boardOffsetX;
+    }
+
+    public double getPieceOffsetX() {
+        return pieceOffsetX;
+    }
+
+
+    public double getPieceOffsetY() {
+        return pieceOffsetY;
+    }
+
+
+    private double pieceOffsetY = 0;
+
+    public void setPieceOffset(double offsetX, double offsetY,double boardOffsetX) {
+        this.pieceOffsetX = offsetX;
+        this.pieceOffsetY = offsetY;
+        this.boardOffsetX = boardOffsetX;
+    }
+
     public BaseBoardRender(Canvas canvas) {
         this.canvas = canvas;
         this.gc = canvas.getGraphicsContext2D();
@@ -31,13 +59,15 @@ public abstract class BaseBoardRender implements BoardRender {
                       boolean stepTip, boolean showMultiPV, List<ChessBoard.MoveTip> moveTips, boolean isReverse, boolean showNumber,
                       boolean manualTip, List<ChessBoard.Step> manualList) {
         Properties prop = Properties.getInstance();
-        int padding = getPadding(boardSize);
-        int piece = getPieceSize(boardSize);
+        int padding = getPadding(boardSize);//10
+        int piece = getPieceSize(boardSize);//60
         int pos = padding + piece / 2;
 
         canvas.setWidth(2 * padding + piece * 9);
         canvas.setHeight(2 * padding + piece * 10);
-
+        //加上这一行！强制清空整个画布 避免切换棋盘大小时异常渲染
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        this.setPieceOffset(prop.getPieceOffsetX(), prop.getPieceOffsetY(),prop.getBoardOffsetX());
         // 绘制背景图片
         drawBackgroundImage(canvas.getWidth(), canvas.getHeight());
         // 绘制棋盘线
@@ -58,7 +88,7 @@ public abstract class BaseBoardRender implements BoardRender {
             drawStepRemark(pos, piece, remark.x, remark.y, false, isReverse, boardSize);
         }
         // 绘制棋子
-        drawPieces(pos, piece, board, isReverse, boardSize);
+        drawPieces(pos, piece, board, isReverse, boardSize,prop.getPieceShadow()==1,prop.getPieceScale());
         // 棋谱变招
         if (manualTip && manualList != null && manualList.size() > 1) {
             for (int i = manualList.size() - 1; i >= 0; i--) {
@@ -88,6 +118,57 @@ public abstract class BaseBoardRender implements BoardRender {
         }
     }
 
+    /**
+     * 绘制棋盘左侧胜率条。
+     * 未翻转时下方为红方、上方为黑方；翻转后上下互换。
+     *
+     * @param pos           棋盘第一行/列的棋子中心坐标
+     * @param piece         棋子大小
+     * @param padding       棋盘边距
+     * @param bottomWinRate 棋盘底部一方的胜率（0~1）
+     * @param isReverse     棋盘是否翻转
+     */
+    public void drawWinRateBar(int pos, int piece, int padding, double bottomWinRate, boolean isReverse) {
+        if (bottomWinRate < 0) {
+            bottomWinRate = 0;
+        } else if (bottomWinRate > 1) {
+            bottomWinRate = 1;
+        }
+
+        // 宽度与左边距：紧贴棋盘左边、与棋盘等长
+        double w = Math.max(8, piece / 6d);
+        double x = 0;
+        // 贯穿整个棋盘（画布）高度，与棋盘上下对齐
+        double top = 0;
+        double h = canvas.getHeight();
+
+        // 底部一方占据的高度
+        double bottomH = h * bottomWinRate;
+
+        Color red = Color.web("#bf242a");
+        Color black = Color.web("#1c1c1c");
+        Color topColor = isReverse ? red : black;
+        Color bottomColor = isReverse ? black : red;
+
+        gc.save();
+        // 顶部一方
+        gc.setFill(topColor);
+        gc.fillRect(x, top, w, h - bottomH);
+        // 底部一方
+        gc.setFill(bottomColor);
+        gc.fillRect(x, top + h - bottomH, w, bottomH);
+        // 红黑分界线
+        double lineWidth = Math.max(1, piece / 60d);
+        gc.setStroke(Color.web("#dfe4ea"));
+        gc.setLineWidth(lineWidth);
+        gc.strokeLine(x, top + h - bottomH, x + w, top + h - bottomH);
+        // 外边框（内缩半个线宽，避免被画布边缘裁掉）
+        gc.setStroke(Color.web("#5a5a5a"));
+        gc.setLineWidth(lineWidth);
+        gc.strokeRect(x + lineWidth / 2, top + lineWidth / 2, w - lineWidth, h - lineWidth);
+        gc.restore();
+    }
+
     // paint edit chess board demo piece
     public void paintDemoBoard(ChessBoard.BoardSize boardSize, char[][] board, ChessBoard.Point remark) {
         int piece = getPieceSize(boardSize);
@@ -105,7 +186,7 @@ public abstract class BaseBoardRender implements BoardRender {
             drawStepRemark(pos, piece, remark.x, remark.y, true, false, boardSize);
         }
         // 绘制棋子
-        drawPieces(pos, piece, board, false, boardSize);
+        drawPieces(pos, piece, board, false, boardSize,false,1.00);
 
     }
 
@@ -342,7 +423,7 @@ public abstract class BaseBoardRender implements BoardRender {
                 return 72;
             }
             case MIDDLE_BOARD: {
-                return 64;
+                return 60;
             }
             case SMALL_BOARD: {
                 return 48;
@@ -351,7 +432,7 @@ public abstract class BaseBoardRender implements BoardRender {
                 return autoPieceSize;
             }
             default: {
-                return 64;
+                return 60;
             }
         }
     }

@@ -14,3 +14,52 @@
 .light-theme .negative-score {
     -fx-text-fill: red;
 }
+
+/* 复盘评价颜色 */
+.light-theme .review-best {
+    -fx-text-fill: #1b7f3b;
+    -fx-font-weight: bold;
+}
+
+.light-theme .review-excellent {
+    -fx-text-fill: #2e9e4f;
+}
+
+.light-theme .review-good {
+    -fx-text-fill: #6d9e2e;
+}
+
+.light-theme .review-inaccuracy {
+    -fx-text-fill: #c99700;
+}
+
+.light-theme .review-mistake {
+    -fx-text-fill: #d2691e;
+}
+
+.light-theme .review-blunder {
+    -fx-text-fill: #c62828;
+    -fx-font-weight: bold;
+}
+
+/* 与背景色一致的工具条文字按钮（复盘等） */
+.light-theme .tool-bar .button.flat-tool-button {
+    -fx-background-color: -fx-base;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6px;
+    -fx-border-color: #c2c2c2;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1px;
+    -fx-text-fill: #3a3a3a;
+    -fx-font-weight: bold;
+}
+
+.light-theme .tool-bar .button.flat-tool-button:hover {
+    -fx-background-color: #dedede;
+    -fx-border-color: #ababab;
+}
+
+.light-theme .tool-bar .button.flat-tool-button:pressed {
+    -fx-background-color: #d2d2d2;
+    -fx-border-color: #9a9a9a;
+}

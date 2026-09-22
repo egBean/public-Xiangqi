@@ -6,6 +6,7 @@ import com.sojourners.chess.config.Properties;
 import com.sojourners.chess.util.PathUtils;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
 
 public abstract class OnnxModel {
 
@@ -28,7 +29,9 @@ public abstract class OnnxModel {
             OrtSession.SessionOptions opt = new OrtSession.SessionOptions();
             opt.setIntraOpNumThreads(Properties.getInstance().getLinkThreadNum());
 
-            String path = PathUtils.getJarPath() + getModelPath();
+            String path = System.getProperty("user.dir")
+                    + File.separator + "model"
+                    + File.separator + getModelPath();
 
             session = env.createSession(path, opt);
 

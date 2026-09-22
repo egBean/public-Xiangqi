@@ -15,7 +15,7 @@ public class Yolo5Model extends OnnxModel {
 
     @Override
     public String getModelPath() {
-        return "model/middle.onnx";
+        return "yolo5-vin.onnx";
     }
 
     /**
