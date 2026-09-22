@@ -714,9 +714,7 @@ public class ChessManualHandle {
     }
 
     public void openChessManualFile(ActionEvent actionEvent) {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setInitialDirectory(new File(
-                StringUtils.isNotEmpty(prop.getChessManualPath()) ? prop.getChessManualPath() : PathUtils.getJarPath()));
+        FileChooser fileChooser = checkManualDir();
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("全部(*.*)", "*.txq", "*.pgn", "*.xqf", "*.cbr"));
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("txq(*.txq)", "*.txq"));
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("pgn(*.pgn)", "*.pgn"));
@@ -726,6 +724,25 @@ public class ChessManualHandle {
         if (file != null) {
             openFromFile(file);
         }
+    }
+
+    private FileChooser checkManualDir() {
+        FileChooser fileChooser = new FileChooser();
+
+        File initDir = null;
+        if (StringUtils.isNotEmpty(prop.getChessManualPath())) {
+            File dir = new File(prop.getChessManualPath());
+            if (dir.exists() && dir.isDirectory()) {
+                initDir = dir;
+            } else {
+                prop.setChessManualPath("");
+            }
+        }
+        if (initDir == null) {
+            initDir = new File(PathUtils.getJarPath());
+        }
+        fileChooser.setInitialDirectory(initDir);
+        return fileChooser;
     }
 
     private void openFromFile(File file) {
@@ -765,9 +782,8 @@ public class ChessManualHandle {
     }
 
     public void saveAsChessManualFile(ActionEvent event) {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setInitialDirectory(new File(
-                StringUtils.isNotEmpty(prop.getChessManualPath()) ? prop.getChessManualPath() : PathUtils.getJarPath()));
+        FileChooser fileChooser = checkManualDir();
+
         fileChooser.setInitialFileName("未命名");
         FileChooser.ExtensionFilter txq = new FileChooser.ExtensionFilter("txq(*.txq)", "*.txq");
         FileChooser.ExtensionFilter pgn = new FileChooser.ExtensionFilter("pgn(*.pgn)", "*.pgn");
