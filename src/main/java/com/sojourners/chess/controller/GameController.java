@@ -84,6 +84,8 @@ public class GameController implements EngineCallBack {
     private HBox redClockPanel;
     @FXML
     private Region clockSpacer;
+    @FXML
+    private Label lowSecondsLabel;
     private Boolean clockOrderReversed;
     @FXML
     private HBox blackClockPanel;
@@ -114,6 +116,9 @@ public class GameController implements EngineCallBack {
     private final long[] moveLeft = new long[2];
     private Timeline clockTimeline;
     private long clockLastTick;
+    // 低时倒计时闪烁（与每秒的秒数变化同步触发）
+    private Timeline blinkTimeline;
+    private long lastLowSecond = -1;
 
     public void initialize() {
         prop = Properties.getInstance();
@@ -268,6 +273,10 @@ public class GameController implements EngineCallBack {
             scaleClockNode(blackClockPanel, fontSize);
             blackClockPanel.setSpacing(gap);
             blackClockPanel.setStyle(cardPadding);
+        }
+        // 中间的低时倒计时数字与时钟数字等大
+        if (lowSecondsLabel != null) {
+            lowSecondsLabel.setStyle("-fx-font-size: " + Math.round(fontSize) + "px;");
         }
     }
 
@@ -464,6 +473,7 @@ public class GameController implements EngineCallBack {
         if (clockTimeline != null) {
             clockTimeline.stop();
         }
+        stopBlink();
     }
 
     private void tickClock() {
@@ -513,6 +523,59 @@ public class GameController implements EngineCallBack {
         setClockLow(redClockMove, moveLeft[0]);
         setClockLow(blackClockMain, mainLeft[1]);
         setClockLow(blackClockMove, moveLeft[1]);
+        updateLowSeconds();
+    }
+
+    /** 我方“局时/步时”不足 10 秒（变红）时，在红黑时钟中间闪烁显示剩余秒数。 */
+    private void updateLowSeconds() {
+        if (lowSecondsLabel == null) {
+            return;
+        }
+        int mySide = engineRed() ? 1 : 0;
+        long low = Long.MAX_VALUE;
+        if (mainLeft[mySide] > 0 && mainLeft[mySide] < 10_000) {
+            low = Math.min(low, mainLeft[mySide]);
+        }
+        if (moveLeft[mySide] > 0 && moveLeft[mySide] < 10_000) {
+            low = Math.min(low, moveLeft[mySide]);
+        }
+        if (low == Long.MAX_VALUE) {
+            stopBlink();
+            return;
+        }
+        long sec = (low + 999) / 1000;
+        lowSecondsLabel.setText(String.valueOf(sec));
+        // 仅在秒数变化的那一帧闪烁，保证与下面时间数字的跳秒同步
+        if (sec != lastLowSecond) {
+            lastLowSecond = sec;
+            flashLowSeconds();
+        }
+    }
+
+    /** 闪一下：立即显示，500ms 后隐藏；由每秒跳秒触发，故每秒闪烁一次且与时间同步。 */
+    private void flashLowSeconds() {
+        if (lowSecondsLabel == null) {
+            return;
+        }
+        lowSecondsLabel.setOpacity(1.0);
+        if (blinkTimeline == null) {
+            blinkTimeline = new Timeline(new KeyFrame(Duration.millis(500),
+                    e -> lowSecondsLabel.setOpacity(0.0)));
+            blinkTimeline.setCycleCount(1);
+        }
+        blinkTimeline.stop();
+        blinkTimeline.playFromStart();
+    }
+
+    private void stopBlink() {
+        if (blinkTimeline != null) {
+            blinkTimeline.stop();
+        }
+        lastLowSecond = -1;
+        if (lowSecondsLabel != null) {
+            lowSecondsLabel.setText("");
+            lowSecondsLabel.setOpacity(1.0);
+        }
     }
 
     /** 剩余时间不足 10 秒时数字变红 */

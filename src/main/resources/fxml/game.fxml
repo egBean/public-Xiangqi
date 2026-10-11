@@ -77,7 +77,11 @@
                                 </VBox>
                             </children>
                         </HBox>
-                        <Region fx:id="clockSpacer" VBox.vgrow="ALWAYS" />
+                        <StackPane fx:id="clockSpacer" maxHeight="Infinity" maxWidth="Infinity" VBox.vgrow="ALWAYS">
+                            <children>
+                                <Label fx:id="lowSecondsLabel" styleClass="low-seconds" text="" />
+                            </children>
+                        </StackPane>
                         <HBox fx:id="redClockPanel" alignment="CENTER" maxWidth="Infinity" spacing="24.0" styleClass="clock-panel">
                             <children>
                                 <Label text="红" style="-fx-background-color: #c0392b;" styleClass="clock-side" />

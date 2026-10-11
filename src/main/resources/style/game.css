@@ -41,6 +41,12 @@
     -fx-text-fill: #e74c3c;
 }
 
+/* 低时在红黑时钟中间闪烁显示的剩余秒数 */
+.low-seconds {
+    -fx-text-fill: #e74c3c;
+    -fx-font-weight: bold;
+}
+
 /* 深色主题 */
 .dark-theme .clock-panel {
     -fx-background-color: #2b322e;
@@ -58,6 +64,10 @@
 }
 
 .dark-theme .clock-time.clock-low {
+    -fx-text-fill: #ff6b5b;
+}
+
+.dark-theme .low-seconds {
     -fx-text-fill: #ff6b5b;
 }
 
