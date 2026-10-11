@@ -360,10 +360,21 @@ public class GameController implements EngineCallBack {
             return;
         }
         int s = redGo ? 0 : 1;
+        boolean mainJustExhausted = false;
         if (mainLeft[s] > 0) {
             mainLeft[s] = Math.max(0, mainLeft[s] - dt);
+            if (mainLeft[s] <= 0) {
+                mainJustExhausted = true;
+            }
         }
         moveLeft[s] -= dt;
+        // 局时刚用完：本步剩余时间超过每步加时的话，把它降为每步加时
+        if (mainJustExhausted) {
+            long bonus = clockTier().getBonusMillis();
+            if (moveLeft[s] > bonus) {
+                moveLeft[s] = bonus;
+            }
+        }
         if (moveLeft[s] <= 0) {
             moveLeft[s] = 0;
             updateClockLabels();
