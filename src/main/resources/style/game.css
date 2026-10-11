@@ -1,0 +1,66 @@
+/* ===================== 对弈模式时钟 ===================== */
+
+.clock-panel {
+    -fx-padding: 6 10 6 10;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-background-color: #eef1f4;
+    -fx-border-color: #ccd3da;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.10), 4, 0.10, 0, 1);
+}
+
+.clock-panel.clock-panel-active {
+    -fx-background-color: #fff7dc;
+    -fx-border-color: #e2a400;
+    -fx-border-width: 2;
+}
+
+.clock-side {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 9 4 9;
+    -fx-background-radius: 6;
+    -fx-text-fill: white;
+}
+
+.clock-caption {
+    -fx-font-size: 11px;
+    -fx-text-fill: #7a8590;
+    -fx-padding: 0 0 0 1;
+}
+
+.clock-time {
+    -fx-font-family: "Consolas", "Menlo", "DejaVu Sans Mono", "Courier New", monospace;
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #16202a;
+}
+
+.clock-time.clock-low {
+    -fx-text-fill: #e74c3c;
+}
+
+/* 深色主题 */
+.dark-theme .clock-panel {
+    -fx-background-color: #2b322e;
+    -fx-border-color: #4a534d;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 4, 0.10, 0, 1);
+}
+
+.dark-theme .clock-panel.clock-panel-active {
+    -fx-background-color: #3a463d;
+    -fx-border-color: #75a58f;
+}
+
+.dark-theme .clock-time {
+    -fx-text-fill: #eef3ef;
+}
+
+.dark-theme .clock-time.clock-low {
+    -fx-text-fill: #ff6b5b;
+}
+
+.dark-theme .clock-caption {
+    -fx-text-fill: #9aa79f;
+}

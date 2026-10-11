@@ -5,10 +5,15 @@ import com.sojourners.chess.controller.ColorSettingController;
 import com.sojourners.chess.controller.Controller;
 import com.sojourners.chess.controller.DeductionController;
 import com.sojourners.chess.controller.EditChessBoardController;
+import com.sojourners.chess.controller.EngineManageController;
+import com.sojourners.chess.controller.GameController;
+import com.sojourners.chess.controller.GameSettingController;
 import com.sojourners.chess.controller.LocalBookController;
+import com.sojourners.chess.model.EngineConfig;
+import com.sojourners.chess.model.GameConfig;
+import com.sojourners.chess.openbook.OpenBookManager;
 import javafx.application.Application;
-import javafx.event.Event;
-import javafx.event.EventHandler;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
@@ -19,9 +24,9 @@ import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import javafx.stage.WindowEvent;
 
 import java.net.URL;
+import java.util.List;
 
 /**
  * 主窗口
@@ -40,40 +45,122 @@ public class App extends Application {
     private static Stage linkSetting;
     private static Stage editChessBoard;
     private static Stage deduction;
+    private static Stage gameSetting;
     private static DeductionController deductionController;
+    private static Controller manualController;
+    private static GameController gameController;
 
     private static final String LIGHT_THEME = themeResource("/style/light-theme.css");
     private static final String DARK_THEME = themeResource("/style/dark-theme.css");
+    private static final String GAME_STYLE = themeResource("/style/game.css");
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        FXMLLoader fxmlLoader = new FXMLLoader();
-        fxmlLoader.setLocation(getClass().getResource("/fxml/app.fxml"));
-        Parent root = fxmlLoader.load();
-        primaryStage.setTitle("TCHESS  V" + VERSION);
-        Scene scene = new Scene(root);
-        applyTheme(scene);
-        primaryStage.setScene(scene);
-        primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/image/icon.png")));
-
-        primaryStage.setOnCloseRequest(new EventHandler() {
-            @Override
-            public void handle(Event event) {
-                Controller controller = fxmlLoader.getController();
-                controller.exit();
-            }
-        });
-        primaryStage.setOnShowing(new EventHandler<WindowEvent>() {
-            @Override
-            public void handle(WindowEvent windowEvent) {
-                Controller controller = fxmlLoader.getController();
-                controller.initStage();
-            }
-        });
-
         mainStage = primaryStage;
+        mainStage.getIcons().add(new Image(getClass().getResourceAsStream("/image/icon.png")));
+        mainStage.setOnCloseRequest(event -> {
+            disposeCurrentController();
+            OpenBookManager.getInstance().close();
+            Platform.exit();
+        });
+        showMenu();
+    }
 
-        primaryStage.show();
+    /**
+     * 启动主菜单：对弈 / 打谱 / 训练。
+     */
+    public static void showMenu() {
+        disposeCurrentController();
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader();
+            fxmlLoader.setLocation(App.class.getResource("/fxml/menu.fxml"));
+            Parent root = fxmlLoader.load();
+            Scene scene = new Scene(root);
+            applyTheme(scene);
+            mainStage.setScene(scene);
+            mainStage.setTitle("TCHESS  V" + VERSION);
+            mainStage.sizeToScene();
+            mainStage.centerOnScreen();
+            mainStage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 打谱：进入原有的分析 / 棋谱主界面。
+     */
+    public static void showManual() {
+        disposeCurrentController();
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader();
+            fxmlLoader.setLocation(App.class.getResource("/fxml/app.fxml"));
+            Parent root = fxmlLoader.load();
+            Scene scene = new Scene(root);
+            applyTheme(scene);
+            mainStage.setScene(scene);
+            mainStage.setTitle("TCHESS  V" + VERSION + " - 打谱");
+
+            Controller controller = fxmlLoader.getController();
+            manualController = controller;
+            controller.initStage();
+            mainStage.sizeToScene();
+            // 恢复打谱模式独立记忆的窗口位置
+            Properties manualProp = Properties.getInstance();
+            if (manualProp.isStagePositionSet()) {
+                mainStage.setX(manualProp.getStageX());
+                mainStage.setY(manualProp.getStageY());
+            } else {
+                mainStage.centerOnScreen();
+            }
+            mainStage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 对弈：进入精简后的对弈界面。
+     */
+    public static void showGame() {
+        disposeCurrentController();
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader();
+            fxmlLoader.setLocation(App.class.getResource("/fxml/game.fxml"));
+            Parent root = fxmlLoader.load();
+            Scene scene = new Scene(root);
+            applyTheme(scene);
+            scene.getStylesheets().add(GAME_STYLE);
+            mainStage.setScene(scene);
+            mainStage.setTitle("TCHESS  V" + VERSION + " - 对弈");
+
+            gameController = fxmlLoader.getController();
+            mainStage.sizeToScene();
+            // 恢复对弈模式独立记忆的窗口位置与大小
+            GameConfig gc = gameController.getGameConfig();
+            mainStage.setWidth(gc.getStageWidth());
+            mainStage.setHeight(gc.getStageHeight());
+            if (gc.isStagePositionSet()) {
+                mainStage.setX(gc.getStageX());
+                mainStage.setY(gc.getStageY());
+            } else {
+                mainStage.centerOnScreen();
+            }
+            mainStage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void disposeCurrentController() {
+        if (manualController != null) {
+            manualController.dispose();
+            manualController = null;
+        }
+        if (gameController != null) {
+            gameController.dispose();
+            gameController = null;
+        }
     }
 
     public static void topWindow(boolean top) {
@@ -81,15 +168,64 @@ public class App extends Application {
     }
 
     /**
-     * 引擎管理对话框
+     * 引擎管理对话框（打谱/分析模式，操作全局引擎列表）
      */
     public static void openEngineDialog() {
+        openEngineDialog(null, null);
+    }
+
+    /**
+     * 引擎管理对话框。
+     *
+     * @param engineList 目标引擎列表；为 null 时使用打谱模式的全局列表
+     * @param onChanged  列表变更后的保存回调；为 null 时保存全局配置
+     */
+    public static void openEngineDialog(List<EngineConfig> engineList, Runnable onChanged) {
+        EngineManageController.targetEngineList = engineList;
+        EngineManageController.onEngineListChanged = onChanged;
         engineSetting = createStage("/fxml/engineDialog.fxml");
         engineSetting.setTitle("引擎管理");
         engineSetting.initModality(Modality.APPLICATION_MODAL);
         engineSetting.initOwner(mainStage);
 
         engineSetting.showAndWait();
+
+        EngineManageController.targetEngineList = null;
+        EngineManageController.onEngineListChanged = null;
+    }
+
+    /**
+     * 对弈设置对话框：引擎高级参数（hash/线程/每步层数）与对弈专用开局库。
+     */
+    public static void openGameSetting(GameConfig config) {
+        try {
+            Stage stage = new Stage();
+            FXMLLoader fxmlLoader = new FXMLLoader();
+            fxmlLoader.setLocation(App.class.getResource("/fxml/gameSetting.fxml"));
+            Parent pane = fxmlLoader.load();
+            Scene scene = new Scene(pane);
+            applyTheme(scene);
+            stage.setScene(scene);
+
+            gameSetting = stage;
+            stage.setTitle("对弈设置");
+            stage.setResizable(false);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.initOwner(mainStage);
+
+            GameSettingController controller = fxmlLoader.getController();
+            controller.init(config);
+
+            stage.showAndWait();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void closeGameSetting() {
+        if (gameSetting != null) {
+            gameSetting.close();
+        }
     }
 
     /**

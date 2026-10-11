@@ -1205,6 +1205,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         // 绘制棋盘
         board = new ChessBoard(this.canvas, prop.getBoardSize(), prop.getBoardStyle(), prop.isStepTip(), prop.isManualTip(),
                 engine != null && engine.getMultiPV() > 1, prop.isStepSound(), prop.isShowNumber(), fenCode);
+        // 确保渲染器绑定到当前画布（切换对弈/打谱界面后 static boardRender 可能仍指向旧画布）
+        board.setBoardStyle(prop.getBoardStyle(), this.canvas);
         // 设置局面
         redGo = StringUtils.isEmpty(fenCode) ? true : !fenCode.contains(" b");
         fenCode = board.fenCode(redGo);
@@ -1547,23 +1549,42 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
     @FXML
     public void exit() {
+        dispose();
+        OpenBookManager.getInstance().close();
+        Platform.exit();
+    }
+
+    /**
+     * 关闭引擎、连线并保存窗口布局（但不退出程序、不关闭开局库）。
+     * 供切换到主菜单或其他模式时调用。
+     */
+    public void dispose() {
         if (engine != null) {
             engine.close();
+            engine = null;
         }
 
-        OpenBookManager.getInstance().close();
-//        ExecutorsUtils.getInstance().close();
-
-        graphLinker.stop();
+        if (graphLinker != null) {
+            graphLinker.stop();
+        }
 
         prop.setStageWidth(borderPane.getWidth());
         prop.setStageHeight(borderPane.getHeight());
         prop.setSplitPos(splitPane.getDividerPositions()[0]);
         prop.setSplitPos2(splitPane2.getDividerPositions()[0]);
+        // 独立记忆打谱窗口的位置
+        if (App.getMainStage() != null && App.getMainStage().isShowing()) {
+            prop.setStageX(App.getMainStage().getX());
+            prop.setStageY(App.getMainStage().getY());
+            prop.setStagePositionSet(true);
+        }
 
         prop.save();
+    }
 
-        Platform.exit();
+    @FXML
+    void returnToMenuClick(ActionEvent event) {
+        App.showMenu();
     }
 
     /**

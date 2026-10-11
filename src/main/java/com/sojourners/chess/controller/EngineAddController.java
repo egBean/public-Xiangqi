@@ -84,7 +84,7 @@ public class EngineAddController {
         }
         if (ec == null) {
             // 添加引擎
-            prop.getEngineConfigList().add(new EngineConfig(nameText.getText(), pathText.getText(), protocolText.getText(), options));
+            EngineManageController.engineList().add(new EngineConfig(nameText.getText(), pathText.getText(), protocolText.getText(), options));
         } else {
             // 编辑引擎
             ec.setName(nameText.getText());
@@ -92,6 +92,7 @@ public class EngineAddController {
             ec.setProtocol(protocolText.getText());
             ec.setOptions(options);
         }
+        EngineManageController.notifyChanged();
         App.closeEngineAdd();
     }
 

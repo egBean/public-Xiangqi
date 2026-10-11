@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<StackPane prefHeight="560.0" prefWidth="480.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sojourners.chess.controller.MenuController">
+    <children>
+        <VBox alignment="CENTER" spacing="18.0" StackPane.alignment="CENTER">
+            <children>
+                <Label text="TCHESS" textAlignment="CENTER">
+                    <font>
+                        <Font name="System Bold" size="34.0" />
+                    </font>
+                </Label>
+                <Label text="中国象棋 · 对弈 / 打谱 / 训练" textAlignment="CENTER" opacity="0.7">
+                    <font>
+                        <Font size="13.0" />
+                    </font>
+                </Label>
+                <VBox alignment="CENTER" spacing="14.0" maxWidth="300.0" VBox.vgrow="NEVER">
+                    <VBox.margin>
+                        <Insets top="26.0" />
+                    </VBox.margin>
+                    <children>
+                        <Button fx:id="playButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#playButtonClick" prefHeight="56.0" styleClass="menu-button" text="对弈" />
+                        <Button fx:id="manualButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#manualButtonClick" prefHeight="56.0" styleClass="menu-button" text="打谱" />
+                        <Button fx:id="trainButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#trainButtonClick" prefHeight="56.0" styleClass="menu-button" text="训练" />
+                    </children>
+                </VBox>
+            </children>
+        </VBox>
+    </children>
+</StackPane>

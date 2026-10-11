@@ -55,6 +55,13 @@ public class Properties implements Serializable {
 
     private double stageHeight;
 
+    /** 打谱窗口位置是否已记录（独立于对弈/训练模式） */
+    private boolean stagePositionSet = false;
+
+    private double stageX;
+
+    private double stageY;
+
     private double splitPos;
     private double splitPos2;
 
@@ -455,6 +462,30 @@ public class Properties implements Serializable {
 
     public void setSplitPos2(double splitPos2) {
         this.splitPos2 = splitPos2;
+    }
+
+    public boolean isStagePositionSet() {
+        return stagePositionSet;
+    }
+
+    public void setStagePositionSet(boolean stagePositionSet) {
+        this.stagePositionSet = stagePositionSet;
+    }
+
+    public double getStageX() {
+        return stageX;
+    }
+
+    public void setStageX(double stageX) {
+        this.stageX = stageX;
+    }
+
+    public double getStageY() {
+        return stageY;
+    }
+
+    public void setStageY(double stageY) {
+        this.stageY = stageY;
     }
 
     public double getStageWidth() {

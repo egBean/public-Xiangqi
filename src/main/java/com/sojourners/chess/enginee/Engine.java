@@ -50,6 +50,10 @@ public class Engine {
 
     private int multiPV;
 
+    /** 对弈模式专用延迟，-1 表示使用全局配置 */
+    private int engineDelayStart = -1;
+    private int engineDelayEnd = -1;
+
     public enum AnalysisModel {
         FIXED_TIME,
         FIXED_STEPS,
@@ -207,8 +211,10 @@ public class Engine {
         if (str.length < 2 || !validateMove(str[1])) {
             return;
         }
-        if (Properties.getInstance().getEngineDelayEnd() > 0 && Properties.getInstance().getEngineDelayEnd() >= Properties.getInstance().getEngineDelayStart()) {
-            int t = random.nextInt(Properties.getInstance().getEngineDelayStart(), Properties.getInstance().getEngineDelayEnd());
+        int start = engineDelayStart >= 0 ? engineDelayStart : Properties.getInstance().getEngineDelayStart();
+        int end = engineDelayEnd >= 0 ? engineDelayEnd : Properties.getInstance().getEngineDelayEnd();
+        if (end > 0 && end >= start) {
+            int t = end > start ? random.nextInt(start, end) : start;
             sleep(t);
         }
         cb.bestMove(str[1], str.length == 4 ? str[3] : null);
@@ -380,6 +386,11 @@ public class Engine {
             this.hashSize = hashSize;
             this.hashSizeChange = true;
         }
+    }
+
+    public void setEngineDelay(int start, int end) {
+        this.engineDelayStart = start;
+        this.engineDelayEnd = end;
     }
 
     public void setAnalysisModel(AnalysisModel model, long v) {

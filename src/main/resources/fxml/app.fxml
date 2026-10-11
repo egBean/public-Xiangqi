@@ -27,6 +27,7 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.StackPane?>
@@ -145,8 +146,10 @@
         <center>
             <BorderPane BorderPane.alignment="CENTER">
                 <top>
-                    <ToolBar minHeight="-Infinity" minWidth="-Infinity" prefHeight="30.0" BorderPane.alignment="CENTER">
-                        <items>
+                    <HBox alignment="CENTER_LEFT">
+                        <children>
+                            <ToolBar maxWidth="Infinity" HBox.hgrow="ALWAYS" minHeight="-Infinity" minWidth="-Infinity" prefHeight="30.0">
+                                <items>
                             <Button fx:id="newButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#newButtonClick" style="-fx-background-image: url('/image/file-plus.png');" stylesheets="@../style/app.css" text="新建">
                                 <opaqueInsets>
                                     <Insets />
@@ -225,8 +228,15 @@
                             <!-- 连线与推演之间的空隙 -->
                             <Region minWidth="36.0" prefWidth="36.0" />
                             <Button fx:id="deductionButton" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#deductionButtonClick" prefHeight="26.0" prefWidth="52.0" style="-fx-pref-width: 52; -fx-pref-height: 26; -fx-background-insets: 0; -fx-padding: 0 6 0 6; -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: #5a3600; -fx-background-color: linear-gradient(to bottom, #ffe9a3 0%, #f3bd3c 48%, #d98f06 100%); -fx-background-radius: 7; -fx-border-color: #a8700a; -fx-border-width: 1; -fx-border-radius: 7; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 5, 0.2, 0, 2);" text="推演" />
-                        </items>
-                    </ToolBar>
+                                </items>
+                            </ToolBar>
+                            <Button fx:id="returnMenuButton" mnemonicParsing="false" onAction="#returnToMenuClick" text="返回主菜单">
+                                <HBox.margin>
+                                    <Insets left="6.0" right="6.0" />
+                                </HBox.margin>
+                            </Button>
+                        </children>
+                    </HBox>
                 </top>
                 <center>
                     <SplitPane fx:id="splitPane" dividerPositions="0.6416122004357299" stylesheets="@../style/split-pane.css" BorderPane.alignment="CENTER">

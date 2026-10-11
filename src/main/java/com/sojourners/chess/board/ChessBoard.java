@@ -58,6 +58,11 @@ public class ChessBoard {
      */
     private double bottomWinRate = 0.5;
 
+    /**
+     * 是否显示左侧胜率条（对弈模式隐藏）
+     */
+    private boolean showWinRate = true;
+
     public static class Point {
         int x;
         int y;
@@ -439,10 +444,20 @@ public class ChessBoard {
         this.boardRender.paint(boardSize, this.board, prevStep, remark, stepTip,
                 showMultiPV, moveTips, isReverse, showNumber, manualTip, manualList);
         // 胜率条最后绘制，避免被棋盘背景覆盖
-        int padding = boardRender.getPadding(boardSize);
-        int piece = boardRender.getPieceSize(boardSize);
-        int pos = padding + piece / 2;
-        boardRender.drawWinRateBar(pos, piece, padding, bottomWinRate, isReverse);
+        if (showWinRate) {
+            int padding = boardRender.getPadding(boardSize);
+            int piece = boardRender.getPieceSize(boardSize);
+            int pos = padding + piece / 2;
+            boardRender.drawWinRateBar(pos, piece, padding, bottomWinRate, isReverse);
+        }
+    }
+
+    /**
+     * 设置是否显示左侧胜率条（对弈模式可隐藏）
+     */
+    public void setShowWinRate(boolean showWinRate) {
+        this.showWinRate = showWinRate;
+        paint();
     }
 
     /**
@@ -579,6 +594,25 @@ public class ChessBoard {
             }
             boardRender.setAutoPieceSize(pieceSize);
 
+            paint();
+        }
+    }
+
+    /**
+     * 按可用区域自适应棋盘大小（对弈模式用，不带分析界面预留）。
+     *
+     * @param width  可用宽度
+     * @param height 可用高度
+     */
+    public void autoFitSize(double width, double height) {
+        if (boardSize == BoardSize.AUTOFIT_BOARD) {
+            double byWidth = width / (9 + 1 / 3d);
+            double byHeight = height / (10 + 1 / 3d);
+            int pieceSize = (int) Math.min(byWidth, byHeight);
+            if (pieceSize < 24) {
+                pieceSize = 24;
+            }
+            boardRender.setAutoPieceSize(pieceSize);
             paint();
         }
     }

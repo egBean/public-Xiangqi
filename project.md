@@ -204,3 +204,43 @@ mvn javafx:run             # 通过插件运行主类
 ```
 
 打包产物：`target/`（Maven）与 `out/artifacts/app/app.jar`（IDE）。
+
+## 8. 启动菜单与对弈模式（新增）
+
+程序启动后先进入 `menu.fxml` 启动主菜单（`MenuController`），三行按钮：
+
+| 按钮 | 行为 |
+| --- | --- |
+| 对弈 | 进入 `game.fxml`（`GameController`），精简对弈界面 |
+| 打谱 | 进入原 `app.fxml`（`Controller`）分析/棋谱主界面 |
+| 训练 | 暂为占位提示（“开发中”） |
+
+`App` 现在通过 `showMenu() / showManual() / showGame()` 在同一 `mainStage` 上切换 Scene；切换前调用当前控制器的 `dispose()` 清理资源。`Controller#exit()` 仍负责真正退出（多调用一次 `OpenBookManager.close()`），新增 `Controller#dispose()` 与 `returnToMenuClick`。
+
+**对弈模式顶部工具栏**（`game.fxml`，带 `tool-bar` 样式的 `HBox`）：左侧依次是“棋力 / 出招速度 / 执子 / 局时”四个下拉框；紧接着是“开始对弈 / 认输”（二选一显示，靠左，与引擎设置同区），其后 `Region` 占位，最右是“设置”“返回主菜单”。时钟在左栏（`leftPanel`/`clockBox`），状态文字在右栏（`rightPanel`/`statusLabel`）。`GameController#autoFitBoard` 先按窗口宽度减左右最小预留 `SIDE_MIN=240` 定棋盘大小，再把左右栏 `prefWidth` 设为棋盘两侧的实际区域宽度 `(总宽 - 棋盘宽)/2`，使左右栏正好等于“棋盘边 ~ 窗体边”的区域；状态文字 `maxWidth` 取该区域的 80%（左右各留 1/10 空白）并居中，随窗口动态调整。`app.fxml` 的“返回主菜单”同样在顶部工具栏最右（外层 `HBox` 包裹 `ToolBar` + 按钮）。
+
+### 8.1 对弈模式配置隔离
+
+**配置独立原则**：对弈、打谱、训练三种模式的配置尽量完全独立、单独保存。当前对弈用 `model/GameConfig.java`（jar 目录下 `gameConfig`），打谱用 `config/Properties`（jar 目录下 `properties`），训练尚未实现、实现时必须使用自己的独立配置文件，不得复用以上两者。窗口位置/大小也按模式分别记忆：对弈存在 `GameConfig.stageX/Y/Width/Height + stagePositionSet`，打谱存在 `Properties.stageX/Y + stagePositionSet`（在各自 `dispose()` 时写入、`App#showGame/showManual` 时恢复）。棋盘样式、棋步提示、走棋音效、显示序号等界面偏好不单独区分，对弈模式直接沿用打谱模式的 `Properties`。
+
+对弈模式使用独立模型 `model/GameConfig.java`，单独序列化保存到 jar 目录下 `gameConfig` 文件，与分析模式 `config/Properties` 完全隔离：
+
+- **对弈引擎（完全独立）**：`GameConfig.engineConfigList` 保存对弈模式专属的引擎列表，`engineName / enginePath / engineProtocol / engineOptions`（基础 options 快照，含 `Skill Level`）记录当前所选引擎，加上 `hashSize / threadNum / depth`（每步层数）。打谱模式仍用 `Properties.engineConfigList`，两者互不影响。引擎管理对话框通过 `App.openEngineDialog(List<EngineConfig>, Runnable onChanged)` 复用：对弈模式传入 `gameConfig.getEngineConfigList()` 与 `gameConfig::save`，打谱模式传 `null`（退回全局列表并 `prop.save()`）；`EngineManageController.targetEngineList / onEngineListChanged` 承接目标列表与保存回调，`EngineAddController` 也写入该目标列表。
+- **设置弹窗**：对弈引擎选择与引擎管理、`hashSize / threadNum / depth`（每步层数）以及对弈开局库（启用、库文件选择、库招规则、脱谱步数）统一放在“设置”弹窗（`gameSetting.fxml` + `GameSettingController`），由 `App.openGameSetting(GameConfig)` 打开。弹窗内所有修改先存入草稿（`GameSettingController` 的 `draft*` 字段，引擎列表为深拷贝），点“保存”才写回 `GameConfig` 并 `save()`；“取消”不保存任何修改（包括引擎管理的改动）。
+- **局时**：`GameConfig.ClockTier` 三档（与棋力/出招速度/执子同在顶部工具栏选择）：快=局时5分钟/步时1分钟/用完后步时20秒；中=10分钟/步时2分钟/用完后30秒；慢=20分钟/步时3分钟/用完后1分钟。默认**快**；出招速度默认**超快**；棋力/出招速度/局时都会记住上次选择（`configVersion < 3` 的旧配置会迁移到新默认）；**执子不记忆**：每次进入对弈都重置为玩家执红（引擎执黑），且“执子”改动不再写盘。`GameController` 用 `Timeline`（200ms）扣减：局时>0时同时扣主局时与步时（步时上限），局时归零后步时按 bonus 重置；超时判负。
+- **棋力**：通过引擎 `Skill Level` option（0~20）设置，`GameConfig.SkillLevel` 定义 10 档：村冠0 / 镇冠2 / 县冠4 / 市冠6 / 省冠8 / 国家大师10 / 象棋大师12 / 特级大师14 / 棋圣16 / 棋神20。开始对弈后棋力及引擎相关控件全部禁用，开始前手动选择。
+- **出招速度**：`GameConfig.DelayTier` 四档，慢30-60s / 中20-40s / 快10-20s / 超快5-10s，出招前随机取区间内秒数延迟。
+- **开局库**：`useBook / openBookList / moveRule / offManualSteps`（脱谱步数）独立存储，且均在“设置”弹窗里可配；`GameController#queryGameBook` 直接实例化 `XqbOpenBook / BhOpenBook / PfOpenBook` 查询，不走全局 `OpenBookManager`。命中库招时状态栏显示“开局库出招...”，否则走引擎分析。对弈模式不会读取打谱模式的 `Properties` 开局库列表，需在“设置”里单独添加。
+
+### 8.2 对弈模式实现要点
+
+- `GameController` 实现 `EngineCallBack`，用 `Engine` 以 `FIXED_STEPS`（每步层数）分析；调用 `engine.analysis(initialFen, moves, null)` 直接走引擎，绕过引擎内部库招与全局延迟。
+- 延迟由 `GameController#delayedPlay` 自行控制：在引擎读线程/库招虚拟线程 `Thread.sleep` 后 `Platform.runLater` 落子。`Engine#setEngineDelay(0,0)` 用于关闭引擎内部全局出招延迟（`Engine` 新增 `engineDelayStart/End` 字段与 setter）。
+- 已移除“悔棋 / 立即出招 / 翻转 / 新局面”按钮：开始对弈即新的一局（`resetBoard`）；玩家执黑时自动翻转棋盘（`isReverse = engineRed()`，切换“执子”时立即 `board.reverse`）。
+- 对局未结束前不允许返回主菜单：`GameController#backToMenuClick` 在 `started` 时弹提示并拦截（将死/困毙/超时/认输后 `started=false` 才能返回）。
+- 左栏显示计时：两个类似国外象棋时钟的卡片（`redClockPanel / blackClockPanel`）分别贴近棋盘的上下底线（不翻转时上黑下红，翻转时上下互换，`GameController#layoutClockOrder`），通过中间可伸缩 `clockSpacer` 分开；`autoFitBoard` 用棋盘上下边距 + 20px 作为左栏上下 padding，使其对齐底线但又不完全靠边。每张卡片有“局时 / 步时”小标题和下面等大加粗的时间数字（`redClockMain / redClockMove / blackClockMain / blackClockMove`，等宽字体 26px）；当前行棋方卡片加亮（`clock-panel-active`），剩余不足 10 秒数字变红（`clock-low`）。样式在新增的 `style/game.css`（`App.showGame` 加载）。
+- 引擎思考时状态栏只显示“引擎思考中...”，不再显示深度/分数（`thinkDetail` 已简化）。
+- 开局后右侧配置面板 `configBox` 隐藏，仅显示“认输”按钮（`gameActionBox`）；将死/困毙（`XiangqiUtils#isSha`）、超时（`endGameByTimeout`）或点击“认输”（`resignButtonClick`）后恢复显示配置并允许再来一局。
+- 对弈模式隐藏棋盘左侧胜率条：`ChessBoard` 新增 `showWinRate` 字段与 `setShowWinRate(boolean)`，`GameController` 创建棋盘后调用 `board.setShowWinRate(false)`。
+- 棋盘随窗口动态调整：对弈棋盘使用 `ChessBoard.BoardSize.AUTOFIT_BOARD`，`ChessBoard` 新增 2 参重载 `autoFitSize(width, height)`（按 9⅓×10⅓ 格空间算棋子尺寸，最小 24）；`game.fxml` 中央改用 `StackPane`（自动居中画布），`GameController#initAutoFitBoard` 监听 `canvasPane` 宽高变化调用自适应；`BaseBoardRender.autoPieceSize` 默认 60。
+- `ChessBoard` 的静态 `boardRender` 会跨画布复用，故 `Controller#newChessBoard` 与 `GameController` 创建棋盘后都调用 `board.setBoardStyle(...)` 重新绑定到当前 canvas。

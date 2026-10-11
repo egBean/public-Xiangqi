@@ -1,0 +1,760 @@
+package com.sojourners.chess.controller;
+
+import com.sojourners.chess.App;
+import com.sojourners.chess.board.ChessBoard;
+import com.sojourners.chess.config.Properties;
+import com.sojourners.chess.enginee.Engine;
+import com.sojourners.chess.enginee.EngineCallBack;
+import com.sojourners.chess.model.BookData;
+import com.sojourners.chess.model.GameConfig;
+import com.sojourners.chess.model.ThinkData;
+import com.sojourners.chess.openbook.BhOpenBook;
+import com.sojourners.chess.openbook.MoveRule;
+import com.sojourners.chess.openbook.OpenBook;
+import com.sojourners.chess.openbook.PfOpenBook;
+import com.sojourners.chess.openbook.XqbOpenBook;
+import com.sojourners.chess.util.DialogUtils;
+import com.sojourners.chess.util.StringUtils;
+import com.sojourners.chess.util.XiangqiUtils;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.application.Platform;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.util.Duration;
+
+import java.io.File;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+/**
+ * 对弈模式控制器。
+ *
+ * 与打谱（分析）模式隔离：对弈引擎配置、开局库、出招延迟、局时均使用独立的
+ * {@link GameConfig} 单独保存。
+ */
+public class GameController implements EngineCallBack {
+
+    @FXML
+    private BorderPane rootPane;
+    @FXML
+    private StackPane canvasPane;
+    @FXML
+    private Canvas canvas;
+    @FXML
+    private Label statusLabel;
+    @FXML
+    private ComboBox<String> skillComboBox;
+    @FXML
+    private ComboBox<String> delayComboBox;
+    @FXML
+    private ComboBox<String> sideComboBox;
+    @FXML
+    private ComboBox<String> clockComboBox;
+    @FXML
+    private Button settingButton;
+    @FXML
+    private Button startButton;
+    @FXML
+    private Button resignButton;
+    @FXML
+    private VBox leftPanel;
+    @FXML
+    private VBox rightPanel;
+    @FXML
+    private VBox clockBox;
+    @FXML
+    private HBox redClockPanel;
+    @FXML
+    private Region clockSpacer;
+    private Boolean clockOrderReversed;
+    @FXML
+    private HBox blackClockPanel;
+    @FXML
+    private Label redClockMain;
+    @FXML
+    private Label redClockMove;
+    @FXML
+    private Label blackClockMain;
+    @FXML
+    private Label blackClockMove;
+
+    private Properties prop;
+    private GameConfig gameConfig;
+    private ChessBoard board;
+    private Engine engine;
+
+    private boolean redGo = true;
+    private boolean isReverse = false;
+    private boolean started = false;
+    private final List<String> moves = new ArrayList<>();
+    private String initialFen = "";
+
+    private final Random random = new SecureRandom();
+
+    // ===== 计时：下标 0=红方，1=黑方 =====
+    private final long[] mainLeft = new long[2];
+    private final long[] moveLeft = new long[2];
+    private Timeline clockTimeline;
+    private long clockLastTick;
+
+    public void initialize() {
+        prop = Properties.getInstance();
+        gameConfig = GameConfig.load();
+        // 执子不记忆：每次进入默认玩家执红（引擎执黑）
+        gameConfig.setEngineSide("black");
+        isReverse = engineRed();
+
+        initBoard();
+        initAutoFitBoard();
+        initListeners();
+        initSkillCombo();
+        initDelayCombo();
+        initSide();
+        initClockCombo();
+        initClockDisplay();
+
+        showConfigView();
+        setControlsLocked(false);
+        setStatus("请设置对弈配置后开始");
+    }
+
+    private void initBoard() {
+        board = new ChessBoard(canvas, ChessBoard.BoardSize.AUTOFIT_BOARD, prop.getBoardStyle(),
+                prop.isStepTip(), true, false, prop.isStepSound(), prop.isShowNumber(), null);
+        board.setBoardStyle(prop.getBoardStyle(), canvas);
+        // 对弈模式隐藏左侧胜率条
+        board.setShowWinRate(false);
+        board.reverse(isReverse);
+        redGo = true;
+        moves.clear();
+        initialFen = board.fenCode(true);
+    }
+
+    /** 左右两侧为时钟 / 状态文字预留的最小宽度 */
+    private static final double SIDE_MIN = 240;
+
+    /** 棋盘随窗口大小动态自适应 */
+    private void initAutoFitBoard() {
+        rootPane.widthProperty().addListener((obs, o, n) -> autoFitBoard());
+        canvasPane.heightProperty().addListener((obs, o, n) -> autoFitBoard());
+        Platform.runLater(this::autoFitBoard);
+    }
+
+    private void autoFitBoard() {
+        if (board == null) {
+            return;
+        }
+        double totalW = rootPane.getWidth();
+        double h = canvasPane.getHeight();
+        if (totalW <= 0 || h <= 0) {
+            return;
+        }
+        // 先按窗口宽度减去左右最小预留来定棋盘大小
+        board.autoFitSize(Math.max(1, totalW - 2 * SIDE_MIN), h);
+        double boardW = canvas.getWidth();
+        // 左右栏宽度 = 棋盘两侧的实际区域宽度，棋盘居中后即“棋盘边 ~ 窗体边”
+        double side = Math.max(1, (totalW - boardW) / 2.0);
+        if (leftPanel != null) {
+            leftPanel.setPrefWidth(side);
+            // 时钟分别贴着红/黑底线（棋盘上下边），但不完全靠边，留一点空隙
+            double vGap = Math.max(0, (canvasPane.getHeight() - canvas.getHeight()) / 2.0);
+            double vInset = 20;
+            leftPanel.setStyle("-fx-padding: " + (vGap + vInset) + "px 14px "
+                    + (vGap + vInset) + "px 14px;");
+        }
+        if (rightPanel != null) {
+            rightPanel.setPrefWidth(side);
+        }
+        // 状态文字区域随该宽度动态调整，左右各留 1/10 空白后居中
+        if (statusLabel != null) {
+            statusLabel.setMaxWidth(Math.max(1, side * 0.8));
+        }
+        layoutClockOrder();
+    }
+
+    /** 时钟分别贴近棋盘上/下底线；翻转时红黑时钟随之上下互换。 */
+    private void layoutClockOrder() {
+        if (clockBox == null || redClockPanel == null || blackClockPanel == null || clockSpacer == null) {
+            return;
+        }
+        if (clockOrderReversed != null && clockOrderReversed == isReverse) {
+            return;
+        }
+        clockOrderReversed = isReverse;
+        if (isReverse) {
+            // 翻转后黑方在下方
+            clockBox.getChildren().setAll(redClockPanel, clockSpacer, blackClockPanel);
+        } else {
+            clockBox.getChildren().setAll(blackClockPanel, clockSpacer, redClockPanel);
+        }
+    }
+
+    private void initListeners() {
+        skillComboBox.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
+            if (n != null) {
+                GameConfig.SkillLevel s = GameConfig.SkillLevel.fromTitle(n);
+                gameConfig.setSkillLevel(s.getValue());
+                gameConfig.getEngineOptions().put("Skill Level", String.valueOf(s.getValue()));
+                gameConfig.save();
+            }
+        });
+
+        delayComboBox.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
+            if (n != null) {
+                gameConfig.setDelayTier(GameConfig.DelayTier.fromTitle(n).name());
+                gameConfig.save();
+            }
+        });
+
+        sideComboBox.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
+            if (n != null) {
+                gameConfig.setEngineSide("引擎执红".equals(n) ? "red" : "black");
+                // 玩家执黑时自动翻转棋盘，保证玩家一方在下方
+                isReverse = engineRed();
+                if (board != null) {
+                    board.reverse(isReverse);
+                }
+                layoutClockOrder();
+            }
+        });
+
+        clockComboBox.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
+            if (n != null) {
+                gameConfig.setClockTier(GameConfig.ClockTier.fromTitle(n).name());
+                gameConfig.save();
+                if (!started) {
+                    initClockDisplay();
+                }
+            }
+        });
+    }
+
+    private void initSkillCombo() {
+        skillComboBox.getItems().clear();
+        for (GameConfig.SkillLevel s : GameConfig.SkillLevel.values()) {
+            skillComboBox.getItems().add(s.getTitle());
+        }
+        skillComboBox.setValue(GameConfig.SkillLevel.fromValue(gameConfig.getSkillLevel()).getTitle());
+    }
+
+    private void initDelayCombo() {
+        delayComboBox.getItems().clear();
+        for (GameConfig.DelayTier t : GameConfig.DelayTier.values()) {
+            delayComboBox.getItems().add(t.getTitle());
+        }
+        delayComboBox.setValue(GameConfig.DelayTier.fromName(gameConfig.getDelayTier()).getTitle());
+    }
+
+    private void initSide() {
+        sideComboBox.getItems().clear();
+        sideComboBox.getItems().addAll("引擎执红", "引擎执黑");
+        sideComboBox.setValue("red".equals(gameConfig.getEngineSide()) ? "引擎执红" : "引擎执黑");
+    }
+
+    private void initClockCombo() {
+        clockComboBox.getItems().clear();
+        for (GameConfig.ClockTier t : GameConfig.ClockTier.values()) {
+            clockComboBox.getItems().add(t.getTitle());
+        }
+        clockComboBox.setValue(GameConfig.ClockTier.fromName(gameConfig.getClockTier()).getTitle());
+    }
+
+    private void setControlsLocked(boolean locked) {
+        skillComboBox.setDisable(locked);
+        delayComboBox.setDisable(locked);
+        sideComboBox.setDisable(locked);
+        clockComboBox.setDisable(locked);
+        settingButton.setDisable(locked);
+        startButton.setDisable(locked);
+        resignButton.setDisable(!locked);
+    }
+
+    /** 开局前 / 对局结束后：显示“开始对弈”，隐藏“认输”。 */
+    private void showConfigView() {
+        setVisible(startButton, true);
+        setVisible(resignButton, false);
+    }
+
+    /** 对局进行中：隐藏“开始对弈”，显示“认输”。 */
+    private void showGameView() {
+        setVisible(startButton, false);
+        setVisible(resignButton, true);
+    }
+
+    private void setVisible(javafx.scene.Node node, boolean visible) {
+        node.setVisible(visible);
+        node.setManaged(visible);
+    }
+
+    // ===================== 计时 =====================
+
+    private GameConfig.ClockTier clockTier() {
+        return GameConfig.ClockTier.fromName(gameConfig.getClockTier());
+    }
+
+    /** 初始化双方的主局时与显示（未开始时按所选档位回显满时间）。 */
+    private void initClockDisplay() {
+        long main = clockTier().getMainMillis();
+        long per = clockTier().getPerMoveMillis();
+        mainLeft[0] = main;
+        mainLeft[1] = main;
+        moveLeft[0] = per;
+        moveLeft[1] = per;
+        updateClockLabels();
+    }
+
+    /** 开局时重置全部计时，并重置当前行棋方的步时。 */
+    private void resetGameClock() {
+        initClockDisplay();
+        resetMoveClock();
+    }
+
+    /** 轮到新的一方走棋时，重置其步时可用时间。 */
+    private void resetMoveClock() {
+        int s = redGo ? 0 : 1;
+        if (mainLeft[s] > 0) {
+            moveLeft[s] = clockTier().getPerMoveMillis();
+        } else {
+            moveLeft[s] = clockTier().getBonusMillis();
+        }
+        updateClockLabels();
+    }
+
+    private void startClock() {
+        clockLastTick = System.nanoTime();
+        if (clockTimeline == null) {
+            clockTimeline = new Timeline(new KeyFrame(Duration.millis(200), e -> tickClock()));
+            clockTimeline.setCycleCount(Timeline.INDEFINITE);
+        }
+        clockTimeline.play();
+    }
+
+    private void stopClock() {
+        if (clockTimeline != null) {
+            clockTimeline.stop();
+        }
+    }
+
+    private void tickClock() {
+        if (!started) {
+            return;
+        }
+        long now = System.nanoTime();
+        long dt = (now - clockLastTick) / 1_000_000L;
+        clockLastTick = now;
+        if (dt <= 0) {
+            return;
+        }
+        int s = redGo ? 0 : 1;
+        if (mainLeft[s] > 0) {
+            mainLeft[s] = Math.max(0, mainLeft[s] - dt);
+        }
+        moveLeft[s] -= dt;
+        if (moveLeft[s] <= 0) {
+            moveLeft[s] = 0;
+            updateClockLabels();
+            endGameByTimeout(s);
+            return;
+        }
+        updateClockLabels();
+    }
+
+    private void updateClockLabels() {
+        int current = redGo ? 0 : 1;
+        redClockMain.setText(formatTime(mainLeft[0]));
+        blackClockMain.setText(formatTime(mainLeft[1]));
+        redClockMove.setText(formatTime(moveLeft[0]));
+        blackClockMove.setText(formatTime(moveLeft[1]));
+        setClockActive(redClockPanel, current == 0);
+        setClockActive(blackClockPanel, current == 1);
+        setClockLow(redClockMain, mainLeft[0]);
+        setClockLow(redClockMove, moveLeft[0]);
+        setClockLow(blackClockMain, mainLeft[1]);
+        setClockLow(blackClockMove, moveLeft[1]);
+    }
+
+    /** 剩余时间不足 10 秒时数字变红 */
+    private void setClockLow(Label label, long ms) {
+        if (ms > 0 && ms < 10_000) {
+            if (!label.getStyleClass().contains("clock-low")) {
+                label.getStyleClass().add("clock-low");
+            }
+        } else {
+            label.getStyleClass().remove("clock-low");
+        }
+    }
+
+    private void setClockActive(HBox panel, boolean active) {
+        if (panel == null) {
+            return;
+        }
+        if (active) {
+            if (!panel.getStyleClass().contains("clock-panel-active")) {
+                panel.getStyleClass().add("clock-panel-active");
+            }
+        } else {
+            panel.getStyleClass().remove("clock-panel-active");
+        }
+    }
+
+    private String formatTime(long ms) {
+        if (ms < 0) {
+            ms = 0;
+        }
+        long totalSec = (ms + 999) / 1000;
+        return String.format("%02d:%02d", totalSec / 60, totalSec % 60);
+    }
+
+    private void endGameByTimeout(int side) {
+        if (!started) {
+            return;
+        }
+        String loser = side == 0 ? "红方" : "黑方";
+        started = false;
+        stopClock();
+        closeEngine();
+        showConfigView();
+        setControlsLocked(false);
+        setStatus(loser + " 超时判负，对局结束");
+        DialogUtils.showInfoDialog("对局结束", loser + " 超时判负，本局结束。");
+    }
+
+    // ===================== 按钮事件 =====================
+
+    @FXML
+    void backToMenuClick(ActionEvent e) {
+        // 对局未结束（将死/困毙/超时/认输）前不允许返回主菜单
+        if (started) {
+            DialogUtils.showWarningDialog("提示", "对局进行中，请先点击“认输”结束本局，或将杀分出胜负后再返回主菜单。");
+            return;
+        }
+        App.showMenu();
+    }
+
+    @FXML
+    void settingButtonClick(ActionEvent e) {
+        // 引擎高级参数与对弈开局库在弹窗中设置，直接读写 gameConfig
+        App.openGameSetting(gameConfig);
+    }
+
+    @FXML
+    void startButtonClick(ActionEvent e) {
+        if (started) {
+            return;
+        }
+        if (!validateConfig()) {
+            return;
+        }
+        if (!loadEngine()) {
+            return;
+        }
+        started = true;
+        // 开始对弈即新的一局；玩家执黑时自动翻转棋盘
+        isReverse = engineRed();
+        resetBoard();
+        showGameView();
+        setControlsLocked(true);
+        resetGameClock();
+        startClock();
+        if (engineTurn()) {
+            engineGo();
+        } else {
+            setStatus("对局开始，请走棋");
+        }
+    }
+
+    @FXML
+    void resignButtonClick(ActionEvent e) {
+        if (!started) {
+            return;
+        }
+        closeEngine();
+        started = false;
+        stopClock();
+        showConfigView();
+        setControlsLocked(false);
+        setStatus("您已认输，对局结束");
+        DialogUtils.showInfoDialog("对局结束", "您已认输，本局结束。");
+    }
+
+    @FXML
+    void canvasClick(MouseEvent event) {
+        if (event.getButton() != MouseButton.PRIMARY) {
+            return;
+        }
+        if (!humanTurn()) {
+            return;
+        }
+        // 当前轮到玩家走棋，玩家只能移动自己一方的棋子
+        boolean canRedGo = redGo;
+        boolean canBlackGo = !redGo;
+        String move = board.mouseClick((int) event.getX(), (int) event.getY(), canRedGo, canBlackGo);
+        if (move != null) {
+            moves.add(move);
+            redGo = !redGo;
+            resetMoveClock();
+            checkGameOver();
+            if (started) {
+                if (engineTurn()) {
+                    engineGo();
+                } else {
+                    setStatus("请走棋");
+                }
+            }
+        }
+    }
+
+    // ===================== 引擎 =====================
+
+    private boolean validateConfig() {
+        if (StringUtils.isEmpty(gameConfig.getEngineName()) || StringUtils.isEmpty(gameConfig.getEnginePath())) {
+            DialogUtils.showWarningDialog("提示", "请先选择对弈引擎");
+            return false;
+        }
+        if (!new File(gameConfig.getEnginePath()).exists()) {
+            DialogUtils.showWarningDialog("提示", "对弈引擎文件不存在，请重新选择引擎");
+            return false;
+        }
+        if (!"uci".equals(gameConfig.getEngineProtocol()) && !"ucci".equals(gameConfig.getEngineProtocol())) {
+            DialogUtils.showWarningDialog("提示", "对弈引擎协议无效");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean loadEngine() {
+        closeEngine();
+        try {
+            engine = new Engine(gameConfig.toEngineConfig(), this);
+            // 对弈模式的出招延迟由本控制器自行控制，关闭引擎内部的全局延迟
+            engine.setEngineDelay(0, 0);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            engine = null;
+            DialogUtils.showWarningDialog("提示", "引擎启动失败：" + (e.getMessage() == null ? "未知错误" : e.getMessage()));
+            return false;
+        }
+    }
+
+    private void closeEngine() {
+        if (engine != null) {
+            engine.close();
+            engine = null;
+        }
+    }
+
+    private void resetBoard() {
+        moves.clear();
+        redGo = true;
+        board = new ChessBoard(canvas, ChessBoard.BoardSize.AUTOFIT_BOARD, prop.getBoardStyle(),
+                prop.isStepTip(), true, false, prop.isStepSound(), prop.isShowNumber(), null);
+        board.setBoardStyle(prop.getBoardStyle(), canvas);
+        board.setShowWinRate(false);
+        board.reverse(isReverse);
+        initialFen = board.fenCode(true);
+        autoFitBoard();
+    }
+
+    private boolean engineRed() {
+        return "red".equals(gameConfig.getEngineSide());
+    }
+
+    private boolean engineTurn() {
+        return started && ((engineRed() && redGo) || (!engineRed() && !redGo));
+    }
+
+    private boolean humanTurn() {
+        return started && !engineTurn();
+    }
+
+    private void engineGo() {
+        if (!started || engine == null || !engineTurn()) {
+            return;
+        }
+        setStatus("引擎思考中...");
+        if (gameConfig.isUseBook() && !offManual()) {
+            Thread.startVirtualThread(() -> {
+                List<BookData> results = queryGameBook();
+                if (!results.isEmpty()) {
+                    Platform.runLater(() -> {
+                        if (started) {
+                            setStatus("开局库出招...");
+                        }
+                    });
+                    delayedPlay(results.get(0).getMove());
+                } else {
+                    runEngineAnalysis();
+                }
+            });
+        } else {
+            runEngineAnalysis();
+        }
+    }
+
+    private boolean offManual() {
+        return moves.size() / 2 >= gameConfig.getOffManualSteps();
+    }
+
+    private void runEngineAnalysis() {
+        if (engine == null || !started) {
+            return;
+        }
+        engine.setThreadNum(gameConfig.getThreadNum());
+        engine.setHashSize(gameConfig.getHashSize());
+        engine.setAnalysisModel(Engine.AnalysisModel.FIXED_STEPS, gameConfig.getDepth());
+        engine.analysis(initialFen, moves, null);
+    }
+
+    private List<BookData> queryGameBook() {
+        List<BookData> results = new ArrayList<>();
+        for (String path : gameConfig.getOpenBookList()) {
+            try {
+                OpenBook ob;
+                if (path.endsWith(".xqb")) {
+                    ob = new XqbOpenBook(path);
+                } else if (path.endsWith(".obk")) {
+                    ob = new BhOpenBook(path);
+                } else if (path.endsWith(".pfBook")) {
+                    ob = new PfOpenBook(path);
+                } else {
+                    continue;
+                }
+                results.addAll(ob.query(board.getBoard(), redGo, gameConfig.getMoveRule()));
+                ob.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        sortBookResults(results, gameConfig.getMoveRule());
+        return results;
+    }
+
+    private void sortBookResults(List<BookData> list, MoveRule mr) {
+        list.sort((o1, o2) -> switch (mr) {
+            case BEST_SCORE -> Integer.compare(o2.getScore(), o1.getScore());
+            case BEST_WINRATE -> Double.compare(o2.getWinRate(), o1.getWinRate());
+            case FULL_RANDOM -> random.nextBoolean() ? 1 : -1;
+            case POSITIVE_RANDOM -> (o1.getScore() > 0 && o2.getScore() > 0)
+                    ? (random.nextBoolean() ? 1 : -1)
+                    : Integer.compare(o2.getScore(), o1.getScore());
+        });
+    }
+
+    private void delayedPlay(String move) {
+        int delay = GameConfig.DelayTier.valueOf(gameConfig.getDelayTier()).randomMillis();
+        // 引擎的思考延迟不能超过它本步的剩余时间，避免“自杀式”超时
+        long remain = moveLeft[redGo ? 0 : 1];
+        if (remain > 0) {
+            delay = (int) Math.min(delay, Math.max(500, remain - 1500));
+        }
+        try {
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
+        }
+        Platform.runLater(() -> {
+            if (started) {
+                playMove(move);
+            }
+        });
+    }
+
+    private void playMove(String move) {
+        if (!started || move == null || move.length() != 4) {
+            return;
+        }
+        board.move(move);
+        moves.add(move);
+        redGo = !redGo;
+        resetMoveClock();
+        checkGameOver();
+        if (started) {
+            if (engineTurn()) {
+                engineGo();
+            } else {
+                setStatus("请走棋");
+            }
+        }
+    }
+
+    private void checkGameOver() {
+        if (!started) {
+            return;
+        }
+        if (XiangqiUtils.isSha(board.getBoard(), redGo)) {
+            String loser = redGo ? "红方" : "黑方";
+            started = false;
+            stopClock();
+            closeEngine();
+            showConfigView();
+            setControlsLocked(false);
+            setStatus("对局结束，" + loser + " 被将死（或困毙）");
+            DialogUtils.showInfoDialog("对局结束", loser + " 被将死（或困毙），本局结束。");
+        }
+    }
+
+    private void setStatus(String text) {
+        statusLabel.setText(text);
+    }
+
+    public GameConfig getGameConfig() {
+        return gameConfig;
+    }
+
+    public void dispose() {
+        started = false;
+        stopClock();
+        closeEngine();
+        // 独立记忆对弈窗口的位置与大小
+        if (App.getMainStage() != null && App.getMainStage().isShowing()) {
+            gameConfig.setStageX(App.getMainStage().getX());
+            gameConfig.setStageY(App.getMainStage().getY());
+            gameConfig.setStageWidth(App.getMainStage().getWidth());
+            gameConfig.setStageHeight(App.getMainStage().getHeight());
+            gameConfig.setStagePositionSet(true);
+        }
+        gameConfig.save();
+    }
+
+    @Override
+    public void bestMove(String first, String second) {
+        if (!started || !engineTurn()) {
+            return;
+        }
+        delayedPlay(first);
+    }
+
+    @Override
+    public void thinkDetail(ThinkData td) {
+        if (!started || td == null) {
+            return;
+        }
+        Platform.runLater(() -> {
+            if (started) {
+                // 只提示思考中，不在状态栏显示深度/分数
+                statusLabel.setText("引擎思考中...");
+            }
+        });
+    }
+
+    @Override
+    public void showBookResults(List<BookData> list) {
+        // 对弈模式自行查询开局库，不使用引擎内部的库招结果
+    }
+}

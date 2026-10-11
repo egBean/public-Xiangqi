@@ -20,7 +20,7 @@ public abstract class BaseBoardRender implements BoardRender {
 
     GraphicsContext gc;
 
-    private static int autoPieceSize;
+    private static int autoPieceSize = 60;
 
     // 棋子图片偏移量（相对棋子半径 r 的比例，正数向右/下，负数向左/上）
     private double pieceOffsetX = 0;
