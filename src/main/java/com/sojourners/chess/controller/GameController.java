@@ -621,7 +621,9 @@ public class GameController implements EngineCallBack {
         showGameOverView();
         setControlsLocked(false);
         setStatus(loser + " 超时判负，对局结束");
-        DialogUtils.showInfoDialog("对局结束", loser + " 超时判负，本局结束。");
+        // 本方法由计时 Timeline（动画处理中）调用，showAndWait 会抛
+        // “not allowed during animation or layout processing”，改为下一帧再弹窗
+        Platform.runLater(() -> DialogUtils.showInfoDialog("对局结束", loser + " 超时判负，本局结束。"));
     }
 
     // ===================== 按钮事件 =====================
