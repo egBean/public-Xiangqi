@@ -46,6 +46,8 @@ public class GameConfig implements Serializable {
     /** 开局库（对弈专用，与打谱模式隔离） */
     private boolean useBook = true;
     private List<String> openBookList = new ArrayList<>();
+    /** 当前启用的开局库路径（对弈时只查询该库；为空表示未选择，则退回使用整个列表） */
+    private String bookPath = "";
     private MoveRule moveRule = MoveRule.BEST_SCORE;
     private int offManualSteps = 9999;
 
@@ -254,6 +256,10 @@ public class GameConfig implements Serializable {
         if (gc.engineProtocol == null) gc.engineProtocol = "";
         if (gc.engineOptions == null) gc.engineOptions = new LinkedHashMap<>();
         if (gc.openBookList == null) gc.openBookList = new ArrayList<>();
+        if (gc.bookPath == null) gc.bookPath = "";
+        if (gc.bookPath.isBlank() && !gc.openBookList.isEmpty()) {
+            gc.bookPath = gc.openBookList.get(0);
+        }
         if (gc.moveRule == null) gc.moveRule = MoveRule.BEST_SCORE;
         if (gc.clockTier == null || gc.clockTier.isBlank()) {
             gc.clockTier = ClockTier.FAST.name();
@@ -373,6 +379,14 @@ public class GameConfig implements Serializable {
 
     public void setOpenBookList(List<String> openBookList) {
         this.openBookList = openBookList;
+    }
+
+    public String getBookPath() {
+        return bookPath;
+    }
+
+    public void setBookPath(String bookPath) {
+        this.bookPath = bookPath;
     }
 
     public MoveRule getMoveRule() {

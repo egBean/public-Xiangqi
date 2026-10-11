@@ -80,7 +80,8 @@
                         <HBox alignment="CENTER_LEFT" spacing="8.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
                             <children>
                                 <ComboBox fx:id="bookComboBox" maxWidth="-Infinity" prefWidth="150.0" />
-                                <Button fx:id="bookSelectButton" mnemonicParsing="false" onAction="#bookSelectButtonClick" text="选择" />
+                                <Button fx:id="bookSelectButton" mnemonicParsing="false" onAction="#bookSelectButtonClick" text="添加" />
+                                <Button fx:id="bookDeleteButton" mnemonicParsing="false" onAction="#bookDeleteButtonClick" text="删除" />
                             </children>
                         </HBox>
                         <Label text="库招规则" GridPane.rowIndex="2" />

@@ -12,6 +12,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.stage.FileChooser;
 
 import java.io.File;
@@ -47,6 +48,8 @@ public class GameSettingController {
     private TextField offManualStepsField;
     @FXML
     private Button bookSelectButton;
+    @FXML
+    private Button bookDeleteButton;
 
     /** 每步层数限制范围：最高 20 层、最低 10 层（限制引擎思考时间） */
     private static final int DEPTH_MIN = 10;
@@ -64,6 +67,7 @@ public class GameSettingController {
     private int draftOffManualSteps;
     private List<EngineConfig> draftEngineList;
     private List<String> draftBookList;
+    private String draftBookPath;
 
     public void init(GameConfig config) {
         this.config = config;
@@ -76,6 +80,7 @@ public class GameSettingController {
         this.draftOffManualSteps = config.getOffManualSteps();
         this.draftEngineList = copyEngineList(config.getEngineConfigList());
         this.draftBookList = new ArrayList<>(config.getOpenBookList());
+        this.draftBookPath = config.getBookPath();
 
         initEngineCombo();
         initDepth();
@@ -142,11 +147,22 @@ public class GameSettingController {
     private void refreshBookCombo() {
         bookComboBox.getItems().clear();
         for (String path : draftBookList) {
-            bookComboBox.getItems().add(new File(path).getName());
+            File f = new File(path);
+            // 不存在的库标记为已失效，方便识别与删除
+            bookComboBox.getItems().add(f.getName() + (f.exists() ? "" : "（已失效）"));
         }
-        if (!bookComboBox.getItems().isEmpty()) {
-            bookComboBox.setValue(bookComboBox.getItems().get(0));
+        if (draftBookList.isEmpty()) {
+            draftBookPath = "";
+            bookComboBox.setValue(null);
+            return;
         }
+        int idx = draftBookPath == null ? -1 : draftBookList.indexOf(draftBookPath);
+        if (idx < 0) {
+            idx = 0;
+            draftBookPath = draftBookList.get(0);
+        }
+        bookComboBox.getSelectionModel().select(idx);
+        bookComboBox.setTooltip(new Tooltip(draftBookPath));
     }
 
     private void initListeners() {
@@ -176,6 +192,15 @@ public class GameSettingController {
         });
 
         useBookCheckBox.selectedProperty().addListener((obs, o, n) -> draftUseBook = n);
+
+        // 切换下拉框即选择当前对弈使用的开局库
+        bookComboBox.getSelectionModel().selectedIndexProperty().addListener((obs, o, n) -> {
+            int idx = n == null ? -1 : n.intValue();
+            if (idx >= 0 && idx < draftBookList.size()) {
+                draftBookPath = draftBookList.get(idx);
+                bookComboBox.setTooltip(new Tooltip(draftBookPath));
+            }
+        });
 
         offManualStepsField.focusedProperty().addListener((obs, o, n) -> {
             if (!n) {
@@ -255,6 +280,24 @@ public class GameSettingController {
                 draftBookList.add(p);
             }
         }
+        if (draftBookPath == null || draftBookPath.isBlank()) {
+            draftBookPath = draftBookList.get(0);
+        }
+        refreshBookCombo();
+    }
+
+    @FXML
+    void bookDeleteButtonClick(ActionEvent e) {
+        int idx = bookComboBox.getSelectionModel().getSelectedIndex();
+        if (idx < 0 || idx >= draftBookList.size()) {
+            return;
+        }
+        draftBookList.remove(idx);
+        if (draftBookList.isEmpty()) {
+            draftBookPath = "";
+        } else if (!draftBookList.contains(draftBookPath)) {
+            draftBookPath = draftBookList.get(0);
+        }
         refreshBookCombo();
     }
 
@@ -272,6 +315,7 @@ public class GameSettingController {
         config.setOffManualSteps(draftOffManualSteps);
         config.setEngineConfigList(draftEngineList);
         config.setOpenBookList(draftBookList);
+        config.setBookPath(draftBookPath);
 
         EngineConfig base = findEngine(draftEngineName);
         if (base != null) {

@@ -805,7 +805,15 @@ public class GameController implements EngineCallBack {
 
     private List<BookData> queryGameBook() {
         List<BookData> results = new ArrayList<>();
-        for (String path : gameConfig.getOpenBookList()) {
+        List<String> paths;
+        String active = gameConfig.getBookPath();
+        if (active != null && !active.isBlank()) {
+            // 对弈设置中已选定某个开局库时，只查询该库
+            paths = List.of(active);
+        } else {
+            paths = gameConfig.getOpenBookList();
+        }
+        for (String path : paths) {
             try {
                 OpenBook ob;
                 if (path.endsWith(".xqb")) {

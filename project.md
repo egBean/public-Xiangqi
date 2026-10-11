@@ -230,7 +230,7 @@ mvn javafx:run             # 通过插件运行主类
 - **局时**：`GameConfig.ClockTier` 三档（与棋力/执子同在顶部工具栏选择）：快=局时5分钟/步时1分钟/用完后步时20秒；中=10分钟/步时2分钟/用完后30秒；慢=20分钟/步时3分钟/用完后1分钟。默认**快**；棋力/局时都会记住上次选择（`configVersion < 3` 的旧配置会迁移到新默认）；**执子不记忆**：每次进入对弈都重置为玩家执红（引擎执黑），且“执子”改动不再写盘。`GameController` 用 `Timeline`（200ms）扣减：局时>0时同时扣主局时与步时（步时上限），局时归零时若本步剩余超过每步加时则立即降为每步加时，之后每步按 bonus 重置；超时判负。
 - **棋力**：通过引擎 `Skill Level` option（0~20）设置，`GameConfig.SkillLevel` 定义 10 档：村冠0 / 镇冠2 / 县冠4 / 市冠6 / 省冠8 / 国家大师10 / 象棋大师12 / 特级大师14 / 棋圣16 / 棋神20。开始对弈后棋力及引擎相关控件全部禁用，开始前手动选择。
 - **出招延迟**：不再单独设挡位，由 `GameConfig.ClockTier` 的加时决定（`ClockTier.delayMinSeconds/MaxSeconds` + `randomDelayMillis()`）：加时 20s(快)→5~10s、加时 30s(中)→10~20s、加时 60s(慢)→30~50s。“延迟”是引擎算完后的**额外等待**，不含引擎思考时间。
-- **开局库**：`useBook / openBookList / moveRule / offManualSteps`（脱谱步数）独立存储，且均在“设置”弹窗里可配；`GameController#queryGameBook` 直接实例化 `XqbOpenBook / BhOpenBook / PfOpenBook` 查询，不走全局 `OpenBookManager`。命中库招时状态栏显示“开局库出招...”，否则走引擎分析。对弈模式不会读取打谱模式的 `Properties` 开局库列表，需在“设置”里单独添加。
+- **开局库**：`useBook / openBookList / bookPath / moveRule / offManualSteps`（脱谱步数）独立存储，且均在“设置”弹窗里可配；`GameController#queryGameBook` 直接实例化 `XqbOpenBook / BhOpenBook / PfOpenBook` 查询，不走全局 `OpenBookManager`。命中库招时状态栏显示“开局库出招...”，否则走引擎分析。对弈模式不会读取打谱模式的 `Properties` 开局库列表，需在“设置”里单独添加。**开局库下拉即“当前启用的库”**：`GameConfig.bookPath` 记录所选库路径，对弈时只查询该库（为空则回退整个 `openBookList`）；`openBookList` 作为可选库池，下拉只显示文件名，不存在的文件标注“（已失效）”并可用“删除”按钮移除（`GameSettingController#bookDeleteButtonClick`，`gameSetting.fxml` 的 `bookDeleteButton`）；切换下拉立即更新 `draftBookPath`，悬停显示完整路径。
 
 ### 8.2 对弈模式实现要点
 
