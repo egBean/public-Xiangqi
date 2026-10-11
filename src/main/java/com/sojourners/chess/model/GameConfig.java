@@ -40,10 +40,7 @@ public class GameConfig implements Serializable {
     /** 棋力：通过引擎的 Skill Level option（0~20）设置 */
     private int skillLevel = 10;
 
-    /** 走棋延迟出招时间档位（慢/中/快/超快），默认超快 */
-    private String delayTier = DelayTier.SUPER_FAST.name();
-
-    /** 局时档位（快/中/慢），默认快 */
+    /** 局时档位（快/中/慢），默认快；引擎出招延迟（总出招时间）由该档位的加时决定 */
     private String clockTier = ClockTier.FAST.name();
 
     /** 开局库（对弈专用，与打谱模式隔离） */
@@ -62,82 +59,35 @@ public class GameConfig implements Serializable {
     private double stageWidth = 880;
     private double stageHeight = 680;
 
-    public enum DelayTier {
-        SUPER_FAST("超快", 5, 10),
-        FAST("快", 10, 20),
-        MEDIUM("中", 20, 40),
-        SLOW("慢", 30, 60);
-
-        private final String title;
-        private final int minSeconds;
-        private final int maxSeconds;
-
-        DelayTier(String title, int minSeconds, int maxSeconds) {
-            this.title = title;
-            this.minSeconds = minSeconds;
-            this.maxSeconds = maxSeconds;
-        }
-
-        public String getTitle() {
-            return title;
-        }
-
-        public int getMinSeconds() {
-            return minSeconds;
-        }
-
-        public int getMaxSeconds() {
-            return maxSeconds;
-        }
-
-        public int randomMillis() {
-            Random r = new SecureRandom();
-            int sec = minSeconds + r.nextInt(maxSeconds - minSeconds + 1);
-            return sec * 1000;
-        }
-
-        public static DelayTier fromTitle(String title) {
-            for (DelayTier t : values()) {
-                if (t.title.equals(title)) {
-                    return t;
-                }
-            }
-            return SUPER_FAST;
-        }
-
-        public static DelayTier fromName(String name) {
-            if (name == null) {
-                return SUPER_FAST;
-            }
-            try {
-                return valueOf(name);
-            } catch (Exception e) {
-                return SUPER_FAST;
-            }
-        }
-    }
-
     /**
      * 局时档位。
      * 快：局时 5 分钟，步时 1 分钟，局时用完后每步 20 秒；
      * 中：局时 10 分钟，步时 2 分钟，局时用完后每步 30 秒；
      * 慢：局时 20 分钟，步时 3 分钟，局时用完后每步 1 分钟。
+     *
+     * 引擎的“出招延迟”（总出招时间）由加时决定：
+     * 加时 20s -> 5~10s，加时 30s -> 10~20s，加时 60s -> 30~50s。
      */
     public enum ClockTier {
-        FAST("快", 5 * 60_000L, 1 * 60_000L, 20_000L),
-        MEDIUM("中", 10 * 60_000L, 2 * 60_000L, 30_000L),
-        SLOW("慢", 20 * 60_000L, 3 * 60_000L, 60_000L);
+        FAST("快", 5 * 60_000L, 1 * 60_000L, 20_000L, 5, 10),
+        MEDIUM("中", 10 * 60_000L, 2 * 60_000L, 30_000L, 10, 20),
+        SLOW("慢", 20 * 60_000L, 3 * 60_000L, 60_000L, 30, 50);
 
         private final String title;
         private final long mainMillis;
         private final long perMoveMillis;
         private final long bonusMillis;
+        private final int delayMinSeconds;
+        private final int delayMaxSeconds;
 
-        ClockTier(String title, long mainMillis, long perMoveMillis, long bonusMillis) {
+        ClockTier(String title, long mainMillis, long perMoveMillis, long bonusMillis,
+                  int delayMinSeconds, int delayMaxSeconds) {
             this.title = title;
             this.mainMillis = mainMillis;
             this.perMoveMillis = perMoveMillis;
             this.bonusMillis = bonusMillis;
+            this.delayMinSeconds = delayMinSeconds;
+            this.delayMaxSeconds = delayMaxSeconds;
         }
 
         public String getTitle() {
@@ -154,6 +104,21 @@ public class GameConfig implements Serializable {
 
         public long getBonusMillis() {
             return bonusMillis;
+        }
+
+        public int getDelayMinSeconds() {
+            return delayMinSeconds;
+        }
+
+        public int getDelayMaxSeconds() {
+            return delayMaxSeconds;
+        }
+
+        /** 随机一个“总出招时间”（毫秒），范围由本档位加时决定。 */
+        public long randomDelayMillis() {
+            Random r = new SecureRandom();
+            int sec = delayMinSeconds + r.nextInt(delayMaxSeconds - delayMinSeconds + 1);
+            return sec * 1000L;
         }
 
         public static ClockTier fromTitle(String title) {
@@ -279,8 +244,7 @@ public class GameConfig implements Serializable {
 
     private static void normalize(GameConfig gc) {
         if (gc.configVersion < 3) {
-            // 迁移到新的默认：出招速度超快、局时快
-            gc.delayTier = DelayTier.SUPER_FAST.name();
+            // 迁移到新的默认：局时快（出招延迟由局时档位决定）
             gc.clockTier = ClockTier.FAST.name();
             gc.configVersion = 3;
         }
@@ -291,9 +255,6 @@ public class GameConfig implements Serializable {
         if (gc.engineOptions == null) gc.engineOptions = new LinkedHashMap<>();
         if (gc.openBookList == null) gc.openBookList = new ArrayList<>();
         if (gc.moveRule == null) gc.moveRule = MoveRule.BEST_SCORE;
-        if (gc.delayTier == null || gc.delayTier.isBlank()) {
-            gc.delayTier = DelayTier.SUPER_FAST.name();
-        }
         if (gc.clockTier == null || gc.clockTier.isBlank()) {
             gc.clockTier = ClockTier.FAST.name();
         }
@@ -384,14 +345,6 @@ public class GameConfig implements Serializable {
 
     public void setSkillLevel(int skillLevel) {
         this.skillLevel = skillLevel;
-    }
-
-    public String getDelayTier() {
-        return delayTier;
-    }
-
-    public void setDelayTier(String delayTier) {
-        this.delayTier = delayTier;
     }
 
     public String getClockTier() {

@@ -17,8 +17,6 @@
             <children>
                 <Label text="棋力" />
                 <ComboBox fx:id="skillComboBox" prefWidth="96.0" />
-                <Label text="出招速度" />
-                <ComboBox fx:id="delayComboBox" prefWidth="80.0" />
                 <Label text="执棋" />
                 <ComboBox fx:id="sideComboBox" prefWidth="110.0" />
                 <Label text="局时" />

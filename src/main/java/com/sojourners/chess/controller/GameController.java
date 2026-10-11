@@ -61,8 +61,6 @@ public class GameController implements EngineCallBack {
     @FXML
     private ComboBox<String> skillComboBox;
     @FXML
-    private ComboBox<String> delayComboBox;
-    @FXML
     private ComboBox<String> sideComboBox;
     @FXML
     private ComboBox<String> clockComboBox;
@@ -131,7 +129,6 @@ public class GameController implements EngineCallBack {
         initAutoFitBoard();
         initListeners();
         initSkillCombo();
-        initDelayCombo();
         initSide();
         initClockCombo();
         initClockDisplay();
@@ -332,13 +329,6 @@ public class GameController implements EngineCallBack {
             }
         });
 
-        delayComboBox.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
-            if (n != null) {
-                gameConfig.setDelayTier(GameConfig.DelayTier.fromTitle(n).name());
-                gameConfig.save();
-            }
-        });
-
         sideComboBox.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
             if (n != null) {
                 gameConfig.setEngineSide("引擎执红".equals(n) ? "red" : "black");
@@ -370,14 +360,6 @@ public class GameController implements EngineCallBack {
         skillComboBox.setValue(GameConfig.SkillLevel.fromValue(gameConfig.getSkillLevel()).getTitle());
     }
 
-    private void initDelayCombo() {
-        delayComboBox.getItems().clear();
-        for (GameConfig.DelayTier t : GameConfig.DelayTier.values()) {
-            delayComboBox.getItems().add(t.getTitle());
-        }
-        delayComboBox.setValue(GameConfig.DelayTier.fromName(gameConfig.getDelayTier()).getTitle());
-    }
-
     private void initSide() {
         sideComboBox.getItems().clear();
         sideComboBox.getItems().addAll("引擎执红", "引擎执黑");
@@ -394,7 +376,6 @@ public class GameController implements EngineCallBack {
 
     private void setControlsLocked(boolean locked) {
         skillComboBox.setDisable(locked);
-        delayComboBox.setDisable(locked);
         sideComboBox.setDisable(locked);
         clockComboBox.setDisable(locked);
         settingButton.setDisable(locked);
@@ -858,14 +839,12 @@ public class GameController implements EngineCallBack {
     }
 
     private void delayedPlay(String move) {
-        int delay = GameConfig.DelayTier.valueOf(gameConfig.getDelayTier()).randomMillis();
-        // 引擎的思考延迟不能超过它本步的剩余时间，避免“自杀式”超时
-        long remain = moveLeft[redGo ? 0 : 1];
-        if (remain > 0) {
-            delay = (int) Math.min(delay, Math.max(500, remain - 1500));
-        }
+        // 出招延迟独立于引擎思考时间：引擎算 3s、延迟 10s，则引擎算完后再等 10s（共约 13s）。
+        // 延迟区间已按“加时 - 10s”设计（20→5~10 / 30→10~20 / 60→30~50），
+        // 即使局时在等待期间耗尽、本步降为加时，也不会超时，故无需再算本步剩余。
+        long wait = clockTier().randomDelayMillis();
         try {
-            Thread.sleep(delay);
+            Thread.sleep(wait);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return;
