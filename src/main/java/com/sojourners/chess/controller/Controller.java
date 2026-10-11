@@ -1049,6 +1049,41 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         // 窗口置顶
         menuOfTopWindow.setSelected(prop.isTopWindow());
         App.topWindow(prop.isTopWindow());
+
+        // 从对弈模式转入的棋谱（对局结束后点击“复盘”）
+        if (App.hasPendingGame()) {
+            loadGameRecord(App.getPendingGameFen(), App.getPendingGameMoves());
+            App.clearPendingGame();
+        }
+    }
+
+    /**
+     * 将对弈模式的整局棋谱载入分析模式（用于对局结束后的“复盘”）。
+     *
+     * @param fenCode  初始局面 FEN
+     * @param moveList 引擎坐标着法列表
+     */
+    public void loadGameRecord(String fenCode, List<String> moveList) {
+        if (StringUtils.isEmpty(fenCode) || moveList == null || moveList.isEmpty()) {
+            return;
+        }
+        // 按初始局面新建棋谱与棋盘（fromManual=true，避免清空刚建立的棋谱）
+        chessManualHandle.newChessManual(fenCode);
+        newChessBoard(fenCode, true);
+        // 逐着记录，并让棋盘停留在终局局面（载入时不播放走棋音效）
+        board.setStepSound(false);
+        try {
+            for (String move : moveList) {
+                board.move(move);
+                List<String> nextList = chessManualHandle.boardMove(move, board.translate(move, true));
+                board.setManualList(nextList);
+                redGo = !redGo;
+            }
+        } finally {
+            board.setStepSound(prop.isStepSound());
+        }
+        refreshLineChart();
+        App.syncDeduction(board.getBoard(), redGo, isReverse.getValue());
     }
 
     private void setButtonTips() {

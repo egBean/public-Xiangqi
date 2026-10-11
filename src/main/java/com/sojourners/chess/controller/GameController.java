@@ -71,6 +71,8 @@ public class GameController implements EngineCallBack {
     @FXML
     private Button resignButton;
     @FXML
+    private Button reviewButton;
+    @FXML
     private VBox leftPanel;
     @FXML
     private VBox rightPanel;
@@ -128,6 +130,7 @@ public class GameController implements EngineCallBack {
         initClockDisplay();
 
         showConfigView();
+        setVisible(reviewButton, false);
         setControlsLocked(false);
         setStatus("请设置对弈配置后开始");
     }
@@ -170,11 +173,10 @@ public class GameController implements EngineCallBack {
         double side = Math.max(1, (totalW - boardW) / 2.0);
         if (leftPanel != null) {
             leftPanel.setPrefWidth(side);
-            // 时钟分别贴着红/黑底线（棋盘上下边），但不完全靠边，留一点空隙
-            double vGap = Math.max(0, (canvasPane.getHeight() - canvas.getHeight()) / 2.0);
-            double vInset = 20;
-            leftPanel.setStyle("-fx-padding: " + (vGap + vInset) + "px 14px "
-                    + (vGap + vInset) + "px 14px;");
+            // 局时上下各留 1/4 间距，避免两个时钟贴得太远
+            double vInset = Math.max(0, canvasPane.getHeight() / 4.0);
+            leftPanel.setStyle("-fx-padding: " + vInset + "px 14px "
+                    + vInset + "px 14px;");
         }
         if (rightPanel != null) {
             rightPanel.setPrefWidth(side);
@@ -289,10 +291,17 @@ public class GameController implements EngineCallBack {
         setVisible(resignButton, false);
     }
 
+    /** 对局结束后：在顶部显示“复盘”按钮（仅在已有棋谱时）。 */
+    private void showGameOverView() {
+        showConfigView();
+        setVisible(reviewButton, !moves.isEmpty());
+    }
+
     /** 对局进行中：隐藏“开始对弈”，显示“认输”。 */
     private void showGameView() {
         setVisible(startButton, false);
         setVisible(resignButton, true);
+        setVisible(reviewButton, false);
     }
 
     private void setVisible(javafx.scene.Node node, boolean visible) {
@@ -438,7 +447,7 @@ public class GameController implements EngineCallBack {
         started = false;
         stopClock();
         closeEngine();
-        showConfigView();
+        showGameOverView();
         setControlsLocked(false);
         setStatus(loser + " 超时判负，对局结束");
         DialogUtils.showInfoDialog("对局结束", loser + " 超时判负，本局结束。");
@@ -496,10 +505,19 @@ public class GameController implements EngineCallBack {
         closeEngine();
         started = false;
         stopClock();
-        showConfigView();
+        showGameOverView();
         setControlsLocked(false);
         setStatus("您已认输，对局结束");
         DialogUtils.showInfoDialog("对局结束", "您已认输，本局结束。");
+    }
+
+    @FXML
+    void reviewButtonClick(ActionEvent e) {
+        if (started || moves.isEmpty()) {
+            return;
+        }
+        // 把整局棋谱转入分析（打谱）模式
+        App.showManualWithGame(initialFen, moves);
     }
 
     @FXML
@@ -713,7 +731,7 @@ public class GameController implements EngineCallBack {
             started = false;
             stopClock();
             closeEngine();
-            showConfigView();
+            showGameOverView();
             setControlsLocked(false);
             setStatus("对局结束，" + loser + " 被将死（或困毙）");
             DialogUtils.showInfoDialog("对局结束", loser + " 被将死（或困毙），本局结束。");

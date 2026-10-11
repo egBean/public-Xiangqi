@@ -33,6 +33,11 @@
                         <Insets left="10.0" />
                     </HBox.margin>
                 </Button>
+                <Button fx:id="reviewButton" managed="false" mnemonicParsing="false" onAction="#reviewButtonClick" prefHeight="26.0" prefWidth="72.0" text="复盘" visible="false">
+                    <HBox.margin>
+                        <Insets left="10.0" />
+                    </HBox.margin>
+                </Button>
                 <Region maxWidth="Infinity" HBox.hgrow="ALWAYS" />
                 <Button fx:id="settingButton" mnemonicParsing="false" onAction="#settingButtonClick" text="设置" />
                 <Button fx:id="backMenuButton" mnemonicParsing="false" onAction="#backToMenuClick" text="返回主菜单">

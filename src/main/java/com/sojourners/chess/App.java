@@ -26,6 +26,7 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -49,6 +50,10 @@ public class App extends Application {
     private static DeductionController deductionController;
     private static Controller manualController;
     private static GameController gameController;
+
+    /** 对弈结束后待转入分析模式的棋谱（初始局面 + 着法列表） */
+    private static String pendingGameFen;
+    private static List<String> pendingGameMoves;
 
     private static final String LIGHT_THEME = themeResource("/style/light-theme.css");
     private static final String DARK_THEME = themeResource("/style/dark-theme.css");
@@ -117,6 +122,37 @@ public class App extends Application {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * 对弈结束后把整局棋谱转入分析模式。
+     *
+     * @param fen        初始局面 FEN
+     * @param moveList   引擎坐标着法列表
+     */
+    public static void showManualWithGame(String fen, List<String> moveList) {
+        pendingGameFen = fen;
+        pendingGameMoves = moveList == null ? null : new ArrayList<>(moveList);
+        showManual();
+    }
+
+    /** 是否存在待加载的对弈棋谱 */
+    public static boolean hasPendingGame() {
+        return pendingGameFen != null && pendingGameMoves != null && !pendingGameMoves.isEmpty();
+    }
+
+    public static String getPendingGameFen() {
+        return pendingGameFen;
+    }
+
+    public static List<String> getPendingGameMoves() {
+        return pendingGameMoves;
+    }
+
+    /** 载入完成后清空待加载棋谱 */
+    public static void clearPendingGame() {
+        pendingGameFen = null;
+        pendingGameMoves = null;
     }
 
     /**
