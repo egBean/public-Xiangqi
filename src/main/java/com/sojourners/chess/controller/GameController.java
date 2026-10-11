@@ -21,6 +21,8 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -173,10 +175,6 @@ public class GameController implements EngineCallBack {
         double side = Math.max(1, (totalW - boardW) / 2.0);
         if (leftPanel != null) {
             leftPanel.setPrefWidth(side);
-            // 局时上下各留 1/4 间距，避免两个时钟贴得太远
-            double vInset = Math.max(0, canvasPane.getHeight() / 4.0);
-            leftPanel.setStyle("-fx-padding: " + vInset + "px 14px "
-                    + vInset + "px 14px;");
         }
         if (rightPanel != null) {
             rightPanel.setPrefWidth(side);
@@ -185,7 +183,117 @@ public class GameController implements EngineCallBack {
         if (statusLabel != null) {
             statusLabel.setMaxWidth(Math.max(1, side * 0.8));
         }
+        applyClockScale(side);
         layoutClockOrder();
+    }
+
+    /**
+     * 时钟字号与「局时/步时」间隔随窗体大小动态缩放。
+     *
+     * 以左侧栏宽度（棋盘边到窗体边）为基准：侧栏越宽时钟越大，
+     * 同时限制在合理范围内，避免过小看不清或过大溢出。
+     * 红/黑徽标、「局时/步时」小标题与时间数字一起按比例缩放，
+     * 保证窗体缩小时整个时钟也能完整显示。
+     */
+    private void applyClockScale(double side) {
+        // 按比例估算在不同字体/取整下可能刚好超宽而被省略号截断，
+        // 这里改为实际测量、二分出“能完整放进侧栏”的最大字号。
+        double lo = 8;
+        double hi = Math.min(72, Math.max(8, side));
+        if (redClockPanel != null && blackClockPanel != null && side > 0) {
+            for (int i = 0; i < 12; i++) {
+                double mid = (lo + hi) / 2;
+                applyClockLayout(side, mid);
+                if (clockPanelsFit(side, mid)) {
+                    lo = mid;
+                } else {
+                    hi = mid;
+                }
+            }
+        }
+        applyClockLayout(side, lo);
+        applyStatusScale(lo);
+    }
+
+    /** 棋盘右侧提示文字与外边距随窗体缩放（与时钟基准字号成比例，限制在合理范围）。 */
+    private void applyStatusScale(double baseFontSize) {
+        if (statusLabel != null) {
+            double f = Math.max(14, Math.min(48, baseFontSize * 0.58));
+            statusLabel.setStyle("-fx-font-size: " + Math.round(f) + "px; -fx-font-weight: bold;");
+        }
+        if (rightPanel != null) {
+            double pad = Math.max(6, baseFontSize * 0.27);
+            rightPanel.setStyle("-fx-padding: 10px " + Math.round(pad) + "px 10px "
+                    + Math.round(pad) + "px;");
+        }
+    }
+
+    /** 时钟面板（连同一侧内边距）能否完整放进侧栏宽度。 */
+    private boolean clockPanelsFit(double side, double fontSize) {
+        double panelPad = Math.max(6, fontSize * 0.27);
+        double available = side - 2 * panelPad - 2; // 预留 2px，避免舍入后刚好被截断
+        for (HBox panel : new HBox[] { redClockPanel, blackClockPanel }) {
+            if (panel == null) {
+                continue;
+            }
+            panel.applyCss();
+            if (panel.prefWidth(-1) > available) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** 按给定基准字号实际应用时钟各元素的大小、间距与内边距。 */
+    private void applyClockLayout(double side, double fontSize) {
+        double gap = Math.max(8, fontSize * 0.46);
+        // 左栏左右 padding 与时钟卡片内边距也按比例缩放，避免缩小时边距偏大
+        double panelPad = Math.max(6, fontSize * 0.27);
+        double cardPadV = Math.max(3, fontSize * 0.115);
+        double cardPadH = Math.max(5, fontSize * 0.19);
+        String cardPadding = "-fx-padding: " + Math.round(cardPadV) + "px " + Math.round(cardPadH)
+                + "px " + Math.round(cardPadV) + "px " + Math.round(cardPadH) + "px;";
+        if (leftPanel != null) {
+            // 局时上下各留 1/4 间距，避免两个时钟贴得太远
+            double vInset = Math.max(0, canvasPane.getHeight() / 4.0);
+            leftPanel.setStyle("-fx-padding: " + vInset + "px " + Math.round(panelPad) + "px "
+                    + vInset + "px " + Math.round(panelPad) + "px;");
+        }
+        if (redClockPanel != null) {
+            scaleClockNode(redClockPanel, fontSize);
+            redClockPanel.setSpacing(gap);
+            redClockPanel.setStyle(cardPadding);
+        }
+        if (blackClockPanel != null) {
+            scaleClockNode(blackClockPanel, fontSize);
+            blackClockPanel.setSpacing(gap);
+            blackClockPanel.setStyle(cardPadding);
+        }
+    }
+
+    /** 递归给时钟块内的标签按样式类设置随基准字号缩放的内联样式。 */
+    private void scaleClockNode(Node node, double fontSize) {
+        if (node instanceof Label label) {
+            if (label.getStyleClass().contains("clock-side")) {
+                double f = Math.max(10, fontSize * 0.25);
+                double v = Math.max(2, fontSize * 0.08);
+                double h = Math.max(4, fontSize * 0.18);
+                // 保留 fxml 里徽标的背景色（文字为“红”/“黑”，据此取色）
+                String bg = "红".equals(label.getText()) ? "#c0392b" : "#2f3b46";
+                label.setStyle("-fx-background-color: " + bg
+                        + "; -fx-font-size: " + Math.round(f) + "px; -fx-padding: "
+                        + Math.round(v) + "px " + Math.round(h) + "px "
+                        + Math.round(v) + "px " + Math.round(h) + "px;");
+            } else if (label.getStyleClass().contains("clock-caption")) {
+                label.setStyle("-fx-font-size: " + Math.round(Math.max(9, fontSize * 0.21)) + "px;");
+            } else if (label.getStyleClass().contains("clock-time")) {
+                label.setStyle("-fx-font-size: " + Math.round(fontSize) + "px;");
+            }
+        } else if (node instanceof Parent parent) {
+            for (Node child : parent.getChildrenUnmodifiable()) {
+                scaleClockNode(child, fontSize);
+            }
+        }
     }
 
     /** 时钟分别贴近棋盘上/下底线；翻转时红黑时钟随之上下互换。 */

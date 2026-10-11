@@ -60,7 +60,7 @@
             <children>
                 <VBox fx:id="clockBox" alignment="TOP_CENTER" maxHeight="Infinity" maxWidth="Infinity" spacing="8.0" VBox.vgrow="ALWAYS">
                     <children>
-                        <HBox fx:id="blackClockPanel" alignment="CENTER" maxWidth="Infinity" spacing="12.0" styleClass="clock-panel">
+                        <HBox fx:id="blackClockPanel" alignment="CENTER" maxWidth="Infinity" spacing="24.0" styleClass="clock-panel">
                             <children>
                                 <Label text="黑" style="-fx-background-color: #2f3b46;" styleClass="clock-side" />
                                 <VBox alignment="CENTER" spacing="0.0">
@@ -78,7 +78,7 @@
                             </children>
                         </HBox>
                         <Region fx:id="clockSpacer" VBox.vgrow="ALWAYS" />
-                        <HBox fx:id="redClockPanel" alignment="CENTER" maxWidth="Infinity" spacing="12.0" styleClass="clock-panel">
+                        <HBox fx:id="redClockPanel" alignment="CENTER" maxWidth="Infinity" spacing="24.0" styleClass="clock-panel">
                             <children>
                                 <Label text="红" style="-fx-background-color: #c0392b;" styleClass="clock-side" />
                                 <VBox alignment="CENTER" spacing="0.0">

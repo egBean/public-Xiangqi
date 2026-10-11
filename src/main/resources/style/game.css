@@ -32,7 +32,7 @@
 
 .clock-time {
     -fx-font-family: "Consolas", "Menlo", "DejaVu Sans Mono", "Courier New", monospace;
-    -fx-font-size: 26px;
+    -fx-font-size: 52px;
     -fx-font-weight: bold;
     -fx-text-fill: #16202a;
 }
