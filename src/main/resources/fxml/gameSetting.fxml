@@ -13,72 +13,83 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane prefHeight="580.0" prefWidth="460.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sojourners.chess.controller.GameSettingController">
+<BorderPane prefHeight="520.0" prefWidth="410.0" stylesheets="@../style/gameSetting.css" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sojourners.chess.controller.GameSettingController">
     <center>
-        <VBox spacing="10.0" BorderPane.alignment="CENTER">
-            <VBox.margin>
-                <Insets top="16.0" left="24.0" right="24.0" bottom="8.0" />
-            </VBox.margin>
+        <VBox spacing="12.0" BorderPane.alignment="TOP_LEFT">
+            <BorderPane.margin>
+                <Insets top="20.0" left="24.0" right="24.0" bottom="8.0" />
+            </BorderPane.margin>
             <children>
                 <Label text="对弈引擎" styleClass="section-title" />
-                <GridPane hgap="10.0" vgap="10.0">
+                <GridPane hgap="12.0" vgap="10.0">
                     <columnConstraints>
-                        <ColumnConstraints minWidth="70.0" prefWidth="80.0" />
-                        <ColumnConstraints hgrow="SOMETIMES" minWidth="160.0" prefWidth="240.0" />
+                        <ColumnConstraints halignment="RIGHT" minWidth="64.0" prefWidth="64.0" />
+                        <ColumnConstraints halignment="LEFT" />
                     </columnConstraints>
                     <children>
                         <Label text="引擎" />
-                        <ComboBox fx:id="engineComboBox" editable="true" maxWidth="Infinity" GridPane.columnIndex="1" />
-                    </children>
-                </GridPane>
-                <HBox alignment="CENTER_LEFT" spacing="6.0">
-                    <children>
-                        <Button fx:id="engineManageButton" mnemonicParsing="false" onAction="#engineManageClick" text="引擎管理" />
-                    </children>
-                </HBox>
-                <Separator />
-                <Label text="引擎高级设置" styleClass="section-title" />
-                <GridPane hgap="10.0" vgap="10.0">
-                    <columnConstraints>
-                        <ColumnConstraints minWidth="70.0" prefWidth="80.0" />
-                        <ColumnConstraints hgrow="SOMETIMES" minWidth="160.0" prefWidth="240.0" />
-                    </columnConstraints>
-                    <children>
-                        <Label text="每步层数" />
-                        <TextField fx:id="depthField" GridPane.columnIndex="1" />
-                        <Label text="线程" GridPane.rowIndex="1" />
-                        <ComboBox fx:id="threadComboBox" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                        <Label text="Hash" GridPane.rowIndex="2" />
-                        <HBox alignment="CENTER_LEFT" spacing="6.0" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                        <HBox alignment="CENTER_LEFT" spacing="8.0" GridPane.columnIndex="1">
                             <children>
-                                <ComboBox fx:id="hashComboBox" maxWidth="Infinity" HBox.hgrow="ALWAYS" />
-                                <Label text="MB" />
+                                <ComboBox fx:id="engineComboBox" maxWidth="-Infinity" prefWidth="120.0" />
+                                <Button fx:id="engineManageButton" mnemonicParsing="false" onAction="#engineManageClick" text="引擎管理" />
                             </children>
                         </HBox>
                     </children>
                 </GridPane>
+
                 <Separator />
-                <Label text="开局库（对弈专用）" styleClass="section-title" />
-                <CheckBox fx:id="useBookCheckBox" mnemonicParsing="false" text="启用开局库" />
-                <HBox alignment="CENTER_LEFT" spacing="6.0">
-                    <children>
-                        <ComboBox fx:id="bookComboBox" maxWidth="Infinity" HBox.hgrow="ALWAYS" />
-                        <Button fx:id="bookSelectButton" mnemonicParsing="false" onAction="#bookSelectButtonClick" text="选择" />
-                    </children>
-                </HBox>
-                <GridPane hgap="10.0" vgap="10.0">
+
+                <Label text="引擎高级设置" styleClass="section-title" />
+                <GridPane hgap="12.0" vgap="10.0">
                     <columnConstraints>
-                        <ColumnConstraints minWidth="70.0" prefWidth="80.0" />
-                        <ColumnConstraints hgrow="SOMETIMES" minWidth="160.0" prefWidth="240.0" />
+                        <ColumnConstraints halignment="RIGHT" minWidth="64.0" prefWidth="64.0" />
+                        <ColumnConstraints halignment="LEFT" />
                     </columnConstraints>
                     <children>
-                        <Label text="库招规则" />
-                        <ComboBox fx:id="moveRuleComboBox" maxWidth="Infinity" GridPane.columnIndex="1" />
-                        <Label text="脱谱步数" GridPane.rowIndex="1" />
-                        <HBox alignment="CENTER_LEFT" spacing="6.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        <Label text="每步层数" />
+                        <HBox alignment="CENTER_LEFT" spacing="8.0" GridPane.columnIndex="1">
                             <children>
-                                <TextField fx:id="offManualStepsField" prefWidth="90.0" />
-                                <Label text="步" />
+                                <TextField fx:id="depthField" alignment="CENTER" maxWidth="-Infinity" prefWidth="120.0" />
+                                <Label text="层（10 ~ 20）" styleClass="hint-label" />
+                            </children>
+                        </HBox>
+                        <Label text="线程" GridPane.rowIndex="1" />
+                        <ComboBox fx:id="threadComboBox" maxWidth="-Infinity" prefWidth="120.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <Label text="Hash" GridPane.rowIndex="2" />
+                        <HBox alignment="CENTER_LEFT" spacing="8.0" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                            <children>
+                                <ComboBox fx:id="hashComboBox" maxWidth="-Infinity" prefWidth="120.0" />
+                                <Label text="MB" styleClass="hint-label" />
+                            </children>
+                        </HBox>
+                    </children>
+                </GridPane>
+
+                <Separator />
+
+                <Label text="开局库（对弈专用）" styleClass="section-title" />
+                <GridPane hgap="12.0" vgap="10.0">
+                    <columnConstraints>
+                        <ColumnConstraints halignment="RIGHT" minWidth="64.0" prefWidth="64.0" />
+                        <ColumnConstraints halignment="LEFT" />
+                    </columnConstraints>
+                    <children>
+                        <Label text="启用开局库" />
+                        <CheckBox fx:id="useBookCheckBox" mnemonicParsing="false" GridPane.columnIndex="1" />
+                        <Label text="开局库" GridPane.rowIndex="1" />
+                        <HBox alignment="CENTER_LEFT" spacing="8.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                            <children>
+                                <ComboBox fx:id="bookComboBox" maxWidth="-Infinity" prefWidth="150.0" />
+                                <Button fx:id="bookSelectButton" mnemonicParsing="false" onAction="#bookSelectButtonClick" text="选择" />
+                            </children>
+                        </HBox>
+                        <Label text="库招规则" GridPane.rowIndex="2" />
+                        <ComboBox fx:id="moveRuleComboBox" maxWidth="-Infinity" prefWidth="150.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <Label text="脱谱步数" GridPane.rowIndex="3" />
+                        <HBox alignment="CENTER_LEFT" spacing="8.0" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                            <children>
+                                <TextField fx:id="offManualStepsField" alignment="CENTER" maxWidth="-Infinity" prefWidth="150.0" />
+                                <Label text="步" styleClass="hint-label" />
                             </children>
                         </HBox>
                     </children>
@@ -87,18 +98,13 @@
         </VBox>
     </center>
     <bottom>
-        <HBox alignment="TOP_RIGHT" minHeight="-Infinity" prefHeight="60.0" BorderPane.alignment="TOP_CENTER">
+        <HBox alignment="CENTER_RIGHT" spacing="12.0" BorderPane.alignment="CENTER">
+            <BorderPane.margin>
+                <Insets top="6.0" right="24.0" bottom="20.0" left="24.0" />
+            </BorderPane.margin>
             <children>
-                <Button mnemonicParsing="false" onAction="#saveButtonClick" prefHeight="27.0" prefWidth="72.0" text="保存">
-                    <HBox.margin>
-                        <Insets right="10.0" />
-                    </HBox.margin>
-                </Button>
-                <Button mnemonicParsing="false" onAction="#cancelButtonClick" prefHeight="27.0" prefWidth="72.0" text="取消">
-                    <HBox.margin>
-                        <Insets right="24.0" />
-                    </HBox.margin>
-                </Button>
+                <Button defaultButton="true" mnemonicParsing="false" onAction="#saveButtonClick" prefHeight="30.0" prefWidth="84.0" text="保存" />
+                <Button cancelButton="true" mnemonicParsing="false" onAction="#cancelButtonClick" prefHeight="30.0" prefWidth="84.0" text="取消" />
             </children>
         </HBox>
     </bottom>

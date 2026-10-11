@@ -48,6 +48,10 @@ public class GameSettingController {
     @FXML
     private Button bookSelectButton;
 
+    /** 每步层数限制范围：最高 20 层、最低 10 层（限制引擎思考时间） */
+    private static final int DEPTH_MIN = 10;
+    private static final int DEPTH_MAX = 20;
+
     private GameConfig config;
 
     // 草稿值
@@ -99,6 +103,7 @@ public class GameSettingController {
     }
 
     private void initDepth() {
+        draftDepth = Math.max(DEPTH_MIN, Math.min(DEPTH_MAX, draftDepth));
         depthField.setText(String.valueOf(draftDepth));
     }
 
@@ -199,10 +204,10 @@ public class GameSettingController {
         String txt = depthField.getText();
         if (txt != null && StringUtils.isPositiveInt(txt.trim())) {
             int d = Integer.parseInt(txt.trim());
-            draftDepth = Math.max(1, d);
-        } else {
-            depthField.setText(String.valueOf(draftDepth));
+            draftDepth = Math.max(DEPTH_MIN, Math.min(DEPTH_MAX, d));
         }
+        // 无论输入是否合法，都回显限制后的值
+        depthField.setText(String.valueOf(draftDepth));
     }
 
     // ===================== 事件 =====================

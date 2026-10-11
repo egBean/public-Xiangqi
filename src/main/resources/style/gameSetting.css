@@ -1,0 +1,13 @@
+/* ===================== 对弈设置弹窗 ===================== */
+
+.section-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-base-color;
+    -fx-padding: 2 0 0 0;
+}
+
+.hint-label {
+    -fx-text-fill: -fx-text-base-color;
+    -fx-opacity: 0.55;
+}

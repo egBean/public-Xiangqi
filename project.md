@@ -84,7 +84,7 @@ com.sojourners.chess
 | --- | --- |
 | `Controller.java` | 主界面控制器（核心交互，约 1700 行） |
 | `EngineManageController.java` | 引擎管理对话框 |
-| `EngineAddController.java` | 添加/编辑引擎 |
+| `EngineAddController.java` | 添加/编辑引擎（`engineAdd.fxml` 已重排为 `GridPane` 标签右对齐 + 全宽输入框 + `ListView` 自适应高度，并引用 `style/gameSetting.css`） |
 | `TimeSettingController.java` | 引擎时间设置 |
 | `BookSettingController.java` | 库招设置 |
 | `LocalBookController.java` | 本地开局库管理 |
@@ -226,7 +226,7 @@ mvn javafx:run             # 通过插件运行主类
 对弈模式使用独立模型 `model/GameConfig.java`，单独序列化保存到 jar 目录下 `gameConfig` 文件，与分析模式 `config/Properties` 完全隔离：
 
 - **对弈引擎（完全独立）**：`GameConfig.engineConfigList` 保存对弈模式专属的引擎列表，`engineName / enginePath / engineProtocol / engineOptions`（基础 options 快照，含 `Skill Level`）记录当前所选引擎，加上 `hashSize / threadNum / depth`（每步层数）。打谱模式仍用 `Properties.engineConfigList`，两者互不影响。引擎管理对话框通过 `App.openEngineDialog(List<EngineConfig>, Runnable onChanged)` 复用：对弈模式传入 `gameConfig.getEngineConfigList()` 与 `gameConfig::save`，打谱模式传 `null`（退回全局列表并 `prop.save()`）；`EngineManageController.targetEngineList / onEngineListChanged` 承接目标列表与保存回调，`EngineAddController` 也写入该目标列表。
-- **设置弹窗**：对弈引擎选择与引擎管理、`hashSize / threadNum / depth`（每步层数）以及对弈开局库（启用、库文件选择、库招规则、脱谱步数）统一放在“设置”弹窗（`gameSetting.fxml` + `GameSettingController`），由 `App.openGameSetting(GameConfig)` 打开。弹窗内所有修改先存入草稿（`GameSettingController` 的 `draft*` 字段，引擎列表为深拷贝），点“保存”才写回 `GameConfig` 并 `save()`；“取消”不保存任何修改（包括引擎管理的改动）。
+- **设置弹窗**：对弈引擎选择与引擎管理、`hashSize / threadNum / depth`（每步层数）以及对弈开局库（启用、库文件选择、库招规则、脱谱步数）统一放在“设置”弹窗（`gameSetting.fxml` + `GameSettingController`），由 `App.openGameSetting(GameConfig)` 打开。界面已重排：各 `GridPane` 标签列统一 `halignment=RIGHT`（宽 64）、行/列间距 `12/10`，四周留 `20px` 边距；各下拉/输入框改为固定宽度（引擎/线程/Hash/每步层数 120，开局库/库招规则/脱谱步数 150，均左对齐）且 `maxWidth=-Infinity` 不拉伸（不占满）；引擎框为非可编辑下拉（原 `editable=true` 已去掉）；“启用开局库”改为 `Label`(列 0 右对齐) + 无文字 `CheckBox`(列 1)，与其余标签对齐；内容区四周留边距（`center` 的 VBox 用 **`<BorderPane.margin>`** 而非 `VBox.margin`，否则作为 BorderPane 子节点时会被忽略导致内容顶到左上；top 20 / left 24 / right 24 / bottom 8，底部按钮区 BorderPane.margin 24），引擎“引擎管理”与开局库“选择”按钮与对应控件同行；弹窗局部样式 `style/gameSetting.css`（`.section-title` / `.hint-label`）。**每步层数限制 10~20**：`GameSettingController` 的 `DEPTH_MIN/DEPTH_MAX` 与 `GameConfig.setDepth/normalize` 双重限制。弹窗内所有修改先存入草稿（`GameSettingController` 的 `draft*` 字段，引擎列表为深拷贝），点“保存”才写回 `GameConfig` 并 `save()`；“取消”不保存任何修改（包括引擎管理的改动）。
 - **局时**：`GameConfig.ClockTier` 三档（与棋力/执子同在顶部工具栏选择）：快=局时5分钟/步时1分钟/用完后步时20秒；中=10分钟/步时2分钟/用完后30秒；慢=20分钟/步时3分钟/用完后1分钟。默认**快**；棋力/局时都会记住上次选择（`configVersion < 3` 的旧配置会迁移到新默认）；**执子不记忆**：每次进入对弈都重置为玩家执红（引擎执黑），且“执子”改动不再写盘。`GameController` 用 `Timeline`（200ms）扣减：局时>0时同时扣主局时与步时（步时上限），局时归零时若本步剩余超过每步加时则立即降为每步加时，之后每步按 bonus 重置；超时判负。
 - **棋力**：通过引擎 `Skill Level` option（0~20）设置，`GameConfig.SkillLevel` 定义 10 档：村冠0 / 镇冠2 / 县冠4 / 市冠6 / 省冠8 / 国家大师10 / 象棋大师12 / 特级大师14 / 棋圣16 / 棋神20。开始对弈后棋力及引擎相关控件全部禁用，开始前手动选择。
 - **出招延迟**：不再单独设挡位，由 `GameConfig.ClockTier` 的加时决定（`ClockTier.delayMinSeconds/MaxSeconds` + `randomDelayMillis()`）：加时 20s(快)→5~10s、加时 30s(中)→10~20s、加时 60s(慢)→30~50s。“延迟”是引擎算完后的**额外等待**，不含引擎思考时间。

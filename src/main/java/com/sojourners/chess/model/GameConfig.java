@@ -269,7 +269,10 @@ public class GameConfig implements Serializable {
         }
         if (gc.hashSize < 1) gc.hashSize = 128;
         if (gc.threadNum < 1) gc.threadNum = 1;
-        if (gc.depth < 1) gc.depth = 15;
+        // 每步层数限制在 10~20（限制引擎思考时间）
+        if (gc.depth <= 0) gc.depth = 15;
+        if (gc.depth < 10) gc.depth = 10;
+        if (gc.depth > 20) gc.depth = 20;
         if (gc.skillLevel < 0) gc.skillLevel = 0;
         if (gc.skillLevel > 20) gc.skillLevel = 20;
         if (gc.offManualSteps < 1) gc.offManualSteps = 9999;
@@ -336,7 +339,8 @@ public class GameConfig implements Serializable {
     }
 
     public void setDepth(int depth) {
-        this.depth = depth;
+        // 每步层数限制在 10~20
+        this.depth = Math.max(10, Math.min(20, depth));
     }
 
     public int getSkillLevel() {
