@@ -154,10 +154,10 @@ public class GameConfig implements Serializable {
         CITY("市冠", 6),
         PROVINCE("省冠", 8),
         NATIONAL_MASTER("国家大师", 10),
-        CHESS_MASTER("象棋大师", 12),
-        GRANDMASTER("特级大师", 14),
-        SAGE("棋圣", 16),
-        GOD("棋神", 20);
+        CHESS_MASTER("特级大师", 12),
+        GRANDMASTER("超凡入圣", 14),
+        SAGE("炼神返虚", 16),
+        GOD("炼虚合道", 20);
 
         private final String title;
         private final int value;

@@ -1,0 +1,43 @@
+/* 主菜单（menu.fxml）样式：背景图 skin/menuBack.png + 磨砂按钮 */
+
+/* 标题 / 副标题加投影，保证在任何背景图上都清晰可读 */
+.menu-title {
+    -fx-text-fill: #ffffff;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.9), 12, 0.5, 0, 2);
+}
+
+.menu-subtitle {
+    -fx-text-fill: #ffffff;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.9), 8, 0.5, 0, 1);
+}
+
+/* 入口按钮：半透明暗色底罩在磨砂层上，白字加粗 + 投影，清晰不糊 */
+.dark-theme .menu-button,
+.light-theme .menu-button {
+    -fx-background-color: rgba(15, 20, 26, 0.34);
+    -fx-background-insets: 0;
+    -fx-background-radius: 16px;
+    -fx-border-color: rgba(255, 255, 255, 0.45);
+    -fx-border-radius: 16px;
+    -fx-border-width: 1px;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 25px;
+    -fx-font-weight: bold;
+    -fx-padding: 0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 10, 0.3, 0, 2);
+    -fx-cursor: hand;
+}
+
+.dark-theme .menu-button:hover,
+.light-theme .menu-button:hover,
+.dark-theme .menu-button:focused,
+.light-theme .menu-button:focused {
+    -fx-background-color: rgba(255, 255, 255, 0.24);
+    -fx-border-color: rgba(255, 255, 255, 0.9);
+}
+
+.dark-theme .menu-button:pressed,
+.light-theme .menu-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.34);
+    -fx-border-color: #ffffff;
+}

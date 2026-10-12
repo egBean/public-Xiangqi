@@ -58,6 +58,7 @@ public class App extends Application {
     private static final String LIGHT_THEME = themeResource("/style/light-theme.css");
     private static final String DARK_THEME = themeResource("/style/dark-theme.css");
     private static final String GAME_STYLE = themeResource("/style/game.css");
+    private static final String MENU_STYLE = themeResource("/style/menu.css");
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -82,6 +83,7 @@ public class App extends Application {
             Parent root = fxmlLoader.load();
             Scene scene = new Scene(root);
             applyTheme(scene);
+            scene.getStylesheets().add(MENU_STYLE);
             mainStage.setScene(scene);
             mainStage.setTitle("TCHESS  V" + VERSION);
             mainStage.sizeToScene();

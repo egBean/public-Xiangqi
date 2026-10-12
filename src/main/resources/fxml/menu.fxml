@@ -7,28 +7,40 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="560.0" prefWidth="480.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sojourners.chess.controller.MenuController">
+<StackPane fx:id="rootPane" prefHeight="560.0" prefWidth="480.0" styleClass="menu-root" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sojourners.chess.controller.MenuController">
     <children>
         <VBox alignment="CENTER" spacing="18.0" StackPane.alignment="CENTER">
             <children>
-                <Label text="TCHESS" textAlignment="CENTER">
+                <Label styleClass="menu-title" text="TCHESS" textAlignment="CENTER">
                     <font>
                         <Font name="System Bold" size="34.0" />
                     </font>
                 </Label>
-                <Label text="中国象棋 · 对弈 / 打谱 / 训练" textAlignment="CENTER" opacity="0.7">
+                <Label opacity="0.9" styleClass="menu-subtitle" text="中国象棋 · 对弈 / 打谱 / 训练" textAlignment="CENTER">
                     <font>
                         <Font size="13.0" />
                     </font>
                 </Label>
-                <VBox alignment="CENTER" spacing="14.0" maxWidth="300.0" VBox.vgrow="NEVER">
+                <VBox alignment="CENTER" maxWidth="320.0" spacing="16.0" VBox.vgrow="NEVER">
                     <VBox.margin>
                         <Insets top="26.0" />
                     </VBox.margin>
                     <children>
-                        <Button fx:id="playButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#playButtonClick" prefHeight="56.0" styleClass="menu-button" text="对弈" />
-                        <Button fx:id="manualButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#manualButtonClick" prefHeight="56.0" styleClass="menu-button" text="打谱" />
-                        <Button fx:id="trainButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#trainButtonClick" prefHeight="56.0" styleClass="menu-button" text="训练" />
+                        <StackPane fx:id="playButtonWrap" maxWidth="Infinity" minHeight="-Infinity" prefHeight="62.0" styleClass="menu-button-wrap">
+                            <children>
+                                <Button fx:id="playButton" maxHeight="Infinity" maxWidth="Infinity" mnemonicParsing="false" onAction="#playButtonClick" styleClass="menu-button" text="对弈" />
+                            </children>
+                        </StackPane>
+                        <StackPane fx:id="manualButtonWrap" maxWidth="Infinity" minHeight="-Infinity" prefHeight="62.0" styleClass="menu-button-wrap">
+                            <children>
+                                <Button fx:id="manualButton" maxHeight="Infinity" maxWidth="Infinity" mnemonicParsing="false" onAction="#manualButtonClick" styleClass="menu-button" text="打谱" />
+                            </children>
+                        </StackPane>
+                        <StackPane fx:id="trainButtonWrap" maxWidth="Infinity" minHeight="-Infinity" prefHeight="62.0" styleClass="menu-button-wrap">
+                            <children>
+                                <Button fx:id="trainButton" maxHeight="Infinity" maxWidth="Infinity" mnemonicParsing="false" onAction="#trainButtonClick" styleClass="menu-button" text="训练" />
+                            </children>
+                        </StackPane>
                     </children>
                 </VBox>
             </children>
