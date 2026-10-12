@@ -31,6 +31,11 @@
                         <Insets left="10.0" />
                     </HBox.margin>
                 </Button>
+                <Button fx:id="suspendButton" managed="false" mnemonicParsing="false" onAction="#suspendButtonClick" prefHeight="26.0" prefWidth="72.0" text="封棋" visible="false">
+                    <HBox.margin>
+                        <Insets left="10.0" />
+                    </HBox.margin>
+                </Button>
                 <Button fx:id="reviewButton" managed="false" mnemonicParsing="false" onAction="#reviewButtonClick" prefHeight="26.0" prefWidth="72.0" text="复盘" visible="false">
                     <HBox.margin>
                         <Insets left="10.0" />

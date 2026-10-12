@@ -7,6 +7,7 @@ import com.sojourners.chess.enginee.Engine;
 import com.sojourners.chess.enginee.EngineCallBack;
 import com.sojourners.chess.model.BookData;
 import com.sojourners.chess.model.GameConfig;
+import com.sojourners.chess.model.GameSnapshot;
 import com.sojourners.chess.model.ThinkData;
 import com.sojourners.chess.openbook.BhOpenBook;
 import com.sojourners.chess.openbook.MoveRule;
@@ -89,6 +90,8 @@ public class GameController implements EngineCallBack {
     @FXML
     private Button reviewButton;
     @FXML
+    private Button suspendButton;
+    @FXML
     private VBox leftPanel;
     @FXML
     private StackPane rightPanel;
@@ -125,7 +128,9 @@ public class GameController implements EngineCallBack {
 
     private boolean redGo = true;
     private boolean isReverse = false;
-    private boolean started = false;
+    private volatile boolean started = false;
+    /** 对局代号：每次开新局/恢复/封棋都递增，用于丢弃旧引擎与旧延迟出招的回调 */
+    private volatile long gameGeneration = 0;
     private final List<String> moves = new ArrayList<>();
     private String initialFen = "";
 
@@ -163,6 +168,8 @@ public class GameController implements EngineCallBack {
         setVisible(reviewButton, false);
         setControlsLocked(false);
         setStatus("请设置对弈配置后开始");
+        // 进入对弈后检查是否有未完成的封棋，有则提示是否恢复
+        Platform.runLater(this::checkSuspendRestore);
     }
 
     /**
@@ -299,6 +306,9 @@ public class GameController implements EngineCallBack {
 
     /** 左右两侧为时钟 / 状态文字预留的最小宽度 */
     private static final double SIDE_MIN = 240;
+
+    /** 引擎模拟延迟出招时为步时保留的安全余量：延迟最多用到“剩余步时 - 该值” */
+    private static final long ENGINE_DELAY_SAFETY_MILLIS = 10_000L;
 
     /** 棋盘随窗口大小动态自适应 */
     private void initAutoFitBoard() {
@@ -562,12 +572,14 @@ public class GameController implements EngineCallBack {
         settingButton.setDisable(locked);
         startButton.setDisable(locked);
         resignButton.setDisable(!locked);
+        suspendButton.setDisable(!locked);
     }
 
-    /** 开局前 / 对局结束后：显示“开始对弈”，隐藏“认输”。 */
+    /** 开局前 / 对局结束后：显示“开始对弈”，隐藏“认输 / 封棋”。 */
     private void showConfigView() {
         setVisible(startButton, true);
         setVisible(resignButton, false);
+        setVisible(suspendButton, false);
     }
 
     /** 对局结束后：在顶部显示“复盘”按钮（仅在已有棋谱时）。 */
@@ -576,10 +588,11 @@ public class GameController implements EngineCallBack {
         setVisible(reviewButton, !moves.isEmpty());
     }
 
-    /** 对局进行中：隐藏“开始对弈”，显示“认输”。 */
+    /** 对局进行中：隐藏“开始对弈”，显示“认输 / 封棋”。 */
     private void showGameView() {
         setVisible(startButton, false);
         setVisible(resignButton, true);
+        setVisible(suspendButton, true);
         setVisible(reviewButton, false);
     }
 
@@ -792,9 +805,9 @@ public class GameController implements EngineCallBack {
 
     @FXML
     void backToMenuClick(ActionEvent e) {
-        // 对局未结束（将死/困毙/超时/认输）前不允许返回主菜单
+        // 对局未结束（将死/困毙/超时/认输/封棋）前不允许直接返回主菜单
         if (started) {
-            DialogUtils.showWarningDialog("提示", "对局进行中，请先点击“认输”结束本局，或将杀分出胜负后再返回主菜单。");
+            DialogUtils.showWarningDialog("提示", "对局进行中，若想离开可点击“封棋”保存本局后再返回；或点击“认输”结束本局。");
             return;
         }
         App.showMenu();
@@ -859,6 +872,38 @@ public class GameController implements EngineCallBack {
         DialogUtils.showInfoDialog("对局结束", "您已认输，本局结束。");
     }
 
+    /**
+     * 封棋：把当前棋局（棋谱 / 计时 / 引擎执红黑）保存到临时文件并回到主菜单。
+     */
+    @FXML
+    void suspendButtonClick(ActionEvent e) {
+        if (!started) {
+            return;
+        }
+        // 先停止对局流程：置 started=false 并递增 gameGeneration 使引擎回调失效，
+        // 同时让正在 sleep 的延迟出招线程在唤醒后直接丢弃，避免封棋后继续走子/计时
+        started = false;
+        gameGeneration++;
+        stopClock();
+        closeEngine();
+
+        GameSnapshot snapshot = new GameSnapshot();
+        snapshot.setInitialFen(initialFen);
+        snapshot.setMoves(new ArrayList<>(moves));
+        snapshot.setRedGo(redGo);
+        snapshot.setEngineSide(gameConfig.getEngineSide());
+        snapshot.setClockTier(gameConfig.getClockTier());
+        snapshot.setRedMain(mainLeft[0]);
+        snapshot.setBlackMain(mainLeft[1]);
+        snapshot.setRedMove(moveLeft[0]);
+        snapshot.setBlackMove(moveLeft[1]);
+        snapshot.setSavedAt(System.currentTimeMillis());
+        GameSnapshot.save(snapshot);
+
+        // 回到主菜单（showMenu 内部会 dispose 当前控制器并保存窗口位置）
+        App.showMenu();
+    }
+
     @FXML
     void reviewButtonClick(ActionEvent e) {
         if (started || moves.isEmpty()) {
@@ -866,6 +911,80 @@ public class GameController implements EngineCallBack {
         }
         // 把整局棋谱转入分析（打谱）模式
         App.showManualWithGame(initialFen, moves);
+    }
+
+    /** 进入对弈模式后检查是否存在未完成的封棋，有则提示是否恢复。 */
+    private void checkSuspendRestore() {
+        if (!GameSnapshot.exists()) {
+            return;
+        }
+        // 先读出内容并删除临时文件，再处理后续的恢复逻辑
+        GameSnapshot snapshot = GameSnapshot.load();
+        GameSnapshot.delete();
+        if (snapshot == null) {
+            return;
+        }
+        boolean restore = DialogUtils.showConfirmDialog("恢复棋局",
+                "检测到上次未完成的棋局，是否继续对局？\n\n选择“确定”继续对局，选择“取消”开始新对局。");
+        if (!restore) {
+            return;
+        }
+        restoreGame(snapshot);
+    }
+
+    /** 从封棋快照恢复棋局并继续对弈。 */
+    private void restoreGame(GameSnapshot snapshot) {
+        if (!validateConfig()) {
+            DialogUtils.showWarningDialog("提示", "无法恢复棋局：对弈引擎不可用，请重新选择引擎。");
+            return;
+        }
+        // 引擎执红黑
+        String side = snapshot.getEngineSide();
+        if (side != null && !side.isBlank()) {
+            gameConfig.setEngineSide(side);
+        }
+        isReverse = engineRed();
+        sideButton.setText(sideText());
+        layoutClockOrder();
+        // 局时档位
+        String tier = snapshot.getClockTier();
+        if (tier != null && !tier.isBlank()) {
+            gameConfig.setClockTier(tier);
+            clockComboBox.setValue(GameConfig.ClockTier.fromName(tier).getTitle());
+        }
+        // 棋谱与行棋方
+        initialFen = snapshot.getInitialFen();
+        moves.clear();
+        if (snapshot.getMoves() != null) {
+            moves.addAll(snapshot.getMoves());
+        }
+        redGo = snapshot.isRedGo();
+        // 棋盘恢复到当前局面（恢复期间关闭走棋音效）
+        boolean sound = prop.isStepSound();
+        board.setStepSound(false);
+        board.browseChessRecord(initialFen, new ArrayList<>(moves));
+        board.setStepSound(sound);
+        board.reverse(isReverse);
+        // 时间：局时与步时都按快照恢复（封棋时当前一手已消耗的步时继续生效），
+        // 同时由 delayedPlay 对“引擎延迟出招”做封顶，避免恢复后引擎超时
+        mainLeft[0] = snapshot.getRedMain();
+        mainLeft[1] = snapshot.getBlackMain();
+        moveLeft[0] = snapshot.getRedMove();
+        moveLeft[1] = snapshot.getBlackMove();
+        updateClockLabels();
+        // 开始对局
+        if (!loadEngine()) {
+            return;
+        }
+        started = true;
+        showGameView();
+        setControlsLocked(true);
+        startClock();
+        if (engineTurn()) {
+            engineGo();
+        } else {
+            setStatus("已恢复对局，请走棋");
+        }
     }
 
     @FXML
@@ -916,7 +1035,34 @@ public class GameController implements EngineCallBack {
     private boolean loadEngine() {
         closeEngine();
         try {
-            engine = new Engine(gameConfig.toEngineConfig(), this);
+            // 当前引擎绑定的对局代号：代号变化后其回调不再生效
+            final long gen = ++gameGeneration;
+            EngineCallBack callback = new EngineCallBack() {
+                @Override
+                public void bestMove(String first, String second) {
+                    if (gen != gameGeneration) {
+                        return;
+                    }
+                    GameController.this.bestMove(first, second, gen);
+                }
+
+                @Override
+                public void thinkDetail(ThinkData td) {
+                    if (gen != gameGeneration) {
+                        return;
+                    }
+                    GameController.this.thinkDetail(td);
+                }
+
+                @Override
+                public void showBookResults(List<BookData> list) {
+                    if (gen != gameGeneration) {
+                        return;
+                    }
+                    GameController.this.showBookResults(list);
+                }
+            };
+            engine = new Engine(gameConfig.toEngineConfig(), callback);
             // 对弈模式的出招延迟由本控制器自行控制，关闭引擎内部的全局延迟
             engine.setEngineDelay(0, 0);
             return true;
@@ -963,17 +1109,21 @@ public class GameController implements EngineCallBack {
         if (!started || engine == null || !engineTurn()) {
             return;
         }
+        final long gen = gameGeneration;
         setStatus("引擎思考中...");
         if (gameConfig.isUseBook() && !offManual()) {
             Thread.startVirtualThread(() -> {
                 List<BookData> results = queryGameBook();
+                if (gen != gameGeneration) {
+                    return;
+                }
                 if (!results.isEmpty()) {
                     Platform.runLater(() -> {
-                        if (started) {
+                        if (gen == gameGeneration && started) {
                             setStatus("开局库出招...");
                         }
                     });
-                    delayedPlay(results.get(0).getMove());
+                    delayedPlay(results.get(0).getMove(), gen);
                 } else {
                     runEngineAnalysis();
                 }
@@ -1040,11 +1190,17 @@ public class GameController implements EngineCallBack {
         });
     }
 
-    private void delayedPlay(String move) {
+    private void delayedPlay(String move, long gen) {
         // 出招延迟独立于引擎思考时间：引擎算 3s、延迟 10s，则引擎算完后再等 10s（共约 13s）。
-        // 延迟区间已按“加时 - 10s”设计（20→5~10 / 30→10~20 / 60→30~50），
-        // 即使局时在等待期间耗尽、本步降为加时，也不会超时，故无需再算本步剩余。
+        // 延迟区间已按“加时 - 10s”设计（20→5~10 / 30→10~20 / 60→30~50）。
+        // 封棋恢复后步时是“已消耗过”的剩余值，这里再对延迟做封顶：
+        // 最多用到“当前行棋方剩余步时 - 10s”，保证不会因为模拟延迟而超时。
         long wait = clockTier().randomDelayMillis();
+        int side = redGo ? 0 : 1;
+        long safe = Math.max(0, moveLeft[side] - ENGINE_DELAY_SAFETY_MILLIS);
+        if (wait > safe) {
+            wait = safe;
+        }
         try {
             Thread.sleep(wait);
         } catch (InterruptedException e) {
@@ -1052,7 +1208,8 @@ public class GameController implements EngineCallBack {
             return;
         }
         Platform.runLater(() -> {
-            if (started) {
+            // 封棋 / 重新开始后 gameGeneration 会变化，旧的延迟出招直接丢弃
+            if (gen == gameGeneration && started) {
                 playMove(move);
             }
         });
@@ -1119,10 +1276,15 @@ public class GameController implements EngineCallBack {
 
     @Override
     public void bestMove(String first, String second) {
+        bestMove(first, second, gameGeneration);
+    }
+
+    /** 引擎返回最佳着法（gen 为产生该着法的对局代号）。 */
+    private void bestMove(String first, String second, long gen) {
         if (!started || !engineTurn()) {
             return;
         }
-        delayedPlay(first);
+        delayedPlay(first, gen);
     }
 
     @Override
