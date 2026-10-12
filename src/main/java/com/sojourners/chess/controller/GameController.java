@@ -706,16 +706,13 @@ public class GameController implements EngineCallBack {
         updateLowSeconds();
     }
 
-    /** 我方“局时/步时”不足 10 秒（变红）时，在红黑时钟中间闪烁显示剩余秒数。 */
+    /** 我方“步时”不足 10 秒（变红）时，在红黑时钟中间闪烁显示剩余秒数；局时耗尽不触发闪烁。 */
     private void updateLowSeconds() {
         if (lowSecondsLabel == null) {
             return;
         }
         int mySide = engineRed() ? 1 : 0;
         long low = Long.MAX_VALUE;
-        if (mainLeft[mySide] > 0 && mainLeft[mySide] < 10_000) {
-            low = Math.min(low, mainLeft[mySide]);
-        }
         if (moveLeft[mySide] > 0 && moveLeft[mySide] < 10_000) {
             low = Math.min(low, moveLeft[mySide]);
         }
