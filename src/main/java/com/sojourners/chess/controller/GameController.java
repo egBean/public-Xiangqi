@@ -209,9 +209,11 @@ public class GameController implements EngineCallBack {
 
     // ===================== 磨砂（高斯模糊）面板 =====================
 
-    private static final double FROST_BLUR = 16;
-    private static final double FROST_ARC = 22;
-    private static final double FROST_MARGIN = 20;
+    // 磨砂参数与主菜单（MenuController）保持一致
+    private static final double FROST_BLUR = 18;
+    /** 与 .clock-panel / .status-overlay 的 -fx-background-radius 保持一致 */
+    private static final double FROST_ARC = 12;
+    private static final double FROST_MARGIN = 24;
     private static final double FROST_INSET = 2;
 
     /** 给时钟 / 状态面板加一层磨砂高斯模糊背景（存在 skin/back.png 时生效）。 */
@@ -236,11 +238,11 @@ public class GameController implements EngineCallBack {
         frost.setManaged(false);
         frost.setPreserveRatio(false);
         frost.setMouseTransparent(true);
-        frost.setOpacity(0.72);
+        frost.setOpacity(0.85);
         frost.setEffect(new GaussianBlur(FROST_BLUR));
         Rectangle clip = new Rectangle();
-        clip.setArcWidth(FROST_ARC);
-        clip.setArcHeight(FROST_ARC);
+        clip.setArcWidth(FROST_ARC * 2);
+        clip.setArcHeight(FROST_ARC * 2);
         frost.setClip(clip);
         panel.getChildren().add(0, frost);
 
