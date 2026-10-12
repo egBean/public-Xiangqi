@@ -2,16 +2,16 @@
 
 .clock-panel {
     -fx-padding: 6 10 6 10;
-    -fx-background-radius: 10;
-    -fx-border-radius: 10;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
     -fx-border-width: 1;
-    -fx-background-color: #eef1f4;
-    -fx-border-color: #ccd3da;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.10), 4, 0.10, 0, 1);
+    -fx-background-color: rgba(0, 0, 0, 0.46);
+    -fx-border-color: rgba(255, 255, 255, 0.55);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 14, 0.28, 0, 2);
 }
 
 .clock-panel.clock-panel-active {
-    -fx-background-color: #fff7dc;
+    -fx-background-color: rgba(0, 0, 0, 0.64);
     -fx-border-color: #e2a400;
     -fx-border-width: 2;
 }
@@ -26,7 +26,7 @@
 
 .clock-caption {
     -fx-font-size: 11px;
-    -fx-text-fill: #7a8590;
+    -fx-text-fill: rgba(255, 255, 255, 0.78);
     -fx-padding: 0 0 0 1;
 }
 
@@ -34,33 +34,35 @@
     -fx-font-family: "Consolas", "Menlo", "DejaVu Sans Mono", "Courier New", monospace;
     -fx-font-size: 52px;
     -fx-font-weight: bold;
-    -fx-text-fill: #16202a;
+    -fx-text-fill: #ffffff;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.85), 5, 0.4, 0, 1);
 }
 
 .clock-time.clock-low {
-    -fx-text-fill: #e74c3c;
+    -fx-text-fill: #ff6b5b;
 }
 
 /* 低时在红黑时钟中间闪烁显示的剩余秒数 */
 .low-seconds {
-    -fx-text-fill: #e74c3c;
+    -fx-text-fill: #ff6b5b;
     -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.85), 5, 0.4, 0, 1);
 }
 
 /* 深色主题 */
 .dark-theme .clock-panel {
-    -fx-background-color: #2b322e;
-    -fx-border-color: #4a534d;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 4, 0.10, 0, 1);
+    -fx-background-color: rgba(10, 14, 12, 0.52);
+    -fx-border-color: rgba(220, 228, 223, 0.50);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.65), 14, 0.30, 0, 2);
 }
 
 .dark-theme .clock-panel.clock-panel-active {
-    -fx-background-color: #3a463d;
+    -fx-background-color: rgba(10, 14, 12, 0.66);
     -fx-border-color: #75a58f;
 }
 
 .dark-theme .clock-time {
-    -fx-text-fill: #eef3ef;
+    -fx-text-fill: #f1f5f2;
 }
 
 .dark-theme .clock-time.clock-low {
@@ -72,10 +74,10 @@
 }
 
 .dark-theme .clock-caption {
-    -fx-text-fill: #9aa79f;
+    -fx-text-fill: rgba(230, 240, 235, 0.78);
 }
 
-/* ===================== 对弈棋盘右下角状态浮层 ===================== */
+/* ===================== 对弈右侧空白区底部的状态栏 ===================== */
 
 /* 半透明底色，保证与任意背景（含 skin/back.png）都能看清文字 */
 .status-overlay {

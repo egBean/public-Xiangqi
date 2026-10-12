@@ -22,6 +22,8 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.geometry.Point2D;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.canvas.Canvas;
@@ -29,7 +31,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
+import javafx.scene.effect.GaussianBlur;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
@@ -39,9 +43,11 @@ import javafx.scene.layout.BackgroundRepeat;
 import javafx.scene.layout.BackgroundSize;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
 import java.io.File;
@@ -71,7 +77,7 @@ public class GameController implements EngineCallBack {
     @FXML
     private ComboBox<String> skillComboBox;
     @FXML
-    private ComboBox<String> sideComboBox;
+    private Button sideButton;
     @FXML
     private ComboBox<String> clockComboBox;
     @FXML
@@ -111,6 +117,9 @@ public class GameController implements EngineCallBack {
     private ChessBoard board;
     private Engine engine;
 
+    /** 对弈背景图（skin/back.png），不存在时为 null */
+    private Image backgroundImage;
+
     /** 状态文字过长时悬停显示的完整内容提示 */
     private Tooltip statusTooltip;
 
@@ -148,6 +157,7 @@ public class GameController implements EngineCallBack {
 
         applyBackgroundImage();
         initStatusOverlay();
+        initFrostedGlass();
 
         showConfigView();
         setVisible(reviewButton, false);
@@ -160,15 +170,12 @@ public class GameController implements EngineCallBack {
      * 图片随窗口大小自动缩放铺满（cover），文件不存在时保持主题默认背景。
      */
     private void applyBackgroundImage() {
-        if (rootPane == null) {
-            return;
-        }
-        Image image = loadBackgroundImage();
-        if (image == null) {
+        backgroundImage = loadBackgroundImage();
+        if (rootPane == null || backgroundImage == null) {
             return;
         }
         BackgroundSize size = new BackgroundSize(1.0, 1.0, true, true, false, true);
-        BackgroundImage bg = new BackgroundImage(image, BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
+        BackgroundImage bg = new BackgroundImage(backgroundImage, BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
                 BackgroundPosition.CENTER, size);
         rootPane.setBackground(new Background(bg));
     }
@@ -191,6 +198,91 @@ public class GameController implements EngineCallBack {
             e.printStackTrace();
             return null;
         }
+    }
+
+    // ===================== 磨砂（高斯模糊）面板 =====================
+
+    private static final double FROST_BLUR = 16;
+    private static final double FROST_ARC = 22;
+    private static final double FROST_MARGIN = 20;
+    private static final double FROST_INSET = 2;
+
+    /** 给时钟 / 状态面板加一层磨砂高斯模糊背景（存在 skin/back.png 时生效）。 */
+    private void initFrostedGlass() {
+        if (backgroundImage == null) {
+            return;
+        }
+        installFrostedGlass(redClockPanel);
+        installFrostedGlass(blackClockPanel);
+        installFrostedGlass(statusOverlay);
+    }
+
+    /**
+     * 在面板内容下方插入一层与主背景图对齐、经高斯模糊的 ImageView，
+     * 形成“毛玻璃”效果；原面板的半透明底色与边框保留作为颜色罩与描边。
+     */
+    private void installFrostedGlass(Pane panel) {
+        if (panel == null || backgroundImage == null) {
+            return;
+        }
+        ImageView frost = new ImageView(backgroundImage);
+        frost.setManaged(false);
+        frost.setPreserveRatio(false);
+        frost.setMouseTransparent(true);
+        frost.setOpacity(0.72);
+        frost.setEffect(new GaussianBlur(FROST_BLUR));
+        Rectangle clip = new Rectangle();
+        clip.setArcWidth(FROST_ARC);
+        clip.setArcHeight(FROST_ARC);
+        frost.setClip(clip);
+        panel.getChildren().add(0, frost);
+
+        Runnable update = () -> updateFrostedGlass(panel, frost, clip);
+        panel.widthProperty().addListener((obs, o, n) -> update.run());
+        panel.heightProperty().addListener((obs, o, n) -> update.run());
+        panel.localToSceneTransformProperty().addListener((obs, o, n) -> update.run());
+        panel.sceneProperty().addListener((obs, o, n) -> update.run());
+        Platform.runLater(update);
+    }
+
+    /** 根据面板在 rootPane 中的位置，同步磨砂图层的放大区域（与 cover 背景对齐）。 */
+    private void updateFrostedGlass(Pane panel, ImageView frost, Rectangle clip) {
+        if (backgroundImage == null || rootPane == null || panel.getScene() == null) {
+            return;
+        }
+        double pw = panel.getWidth();
+        double ph = panel.getHeight();
+        double rootW = rootPane.getWidth();
+        double rootH = rootPane.getHeight();
+        double imgW = backgroundImage.getWidth();
+        double imgH = backgroundImage.getHeight();
+        if (pw <= 0 || ph <= 0 || rootW <= 0 || rootH <= 0 || imgW <= 0 || imgH <= 0) {
+            return;
+        }
+        // 背景图在 rootPane 中以 cover + center 方式铺满
+        double scale = Math.max(rootW / imgW, rootH / imgH);
+        double offX = (rootW - imgW * scale) / 2.0;
+        double offY = (rootH - imgH * scale) / 2.0;
+        Point2D p = rootPane.sceneToLocal(panel.localToScene(0, 0));
+        double vx = (p.getX() - offX) / scale;
+        double vy = (p.getY() - offY) / scale;
+        double vw = pw / scale;
+        double vh = ph / scale;
+        // 向外扩一圈，避免模糊在视口边缘出现透明软边
+        double m = FROST_MARGIN / scale;
+        double x0 = Math.max(0, vx - m);
+        double y0 = Math.max(0, vy - m);
+        double x1 = Math.min(imgW, vx + vw + m);
+        double y1 = Math.min(imgH, vy + vh + m);
+        frost.setViewport(new Rectangle2D(x0, y0, x1 - x0, y1 - y0));
+        frost.setFitWidth((x1 - x0) * scale);
+        frost.setFitHeight((y1 - y0) * scale);
+        frost.relocate((x0 - vx) * scale, (y0 - vy) * scale);
+        // 磨砂层向内缩 2px，保留面板自身的半透明底色与边框（含行棋方高亮边框）
+        clip.setX((vx - x0) * scale + FROST_INSET);
+        clip.setY((vy - y0) * scale + FROST_INSET);
+        clip.setWidth(Math.max(0, pw - 2 * FROST_INSET));
+        clip.setHeight(Math.max(0, ph - 2 * FROST_INSET));
     }
 
     private void initBoard() {
@@ -427,18 +519,6 @@ public class GameController implements EngineCallBack {
             }
         });
 
-        sideComboBox.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
-            if (n != null) {
-                gameConfig.setEngineSide("引擎执红".equals(n) ? "red" : "black");
-                // 玩家执黑时自动翻转棋盘，保证玩家一方在下方
-                isReverse = engineRed();
-                if (board != null) {
-                    board.reverse(isReverse);
-                }
-                layoutClockOrder();
-            }
-        });
-
         clockComboBox.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
             if (n != null) {
                 gameConfig.setClockTier(GameConfig.ClockTier.fromTitle(n).name());
@@ -459,9 +539,12 @@ public class GameController implements EngineCallBack {
     }
 
     private void initSide() {
-        sideComboBox.getItems().clear();
-        sideComboBox.getItems().addAll("引擎执红", "引擎执黑");
-        sideComboBox.setValue("red".equals(gameConfig.getEngineSide()) ? "引擎执红" : "引擎执黑");
+        sideButton.setText(sideText());
+    }
+
+    /** “执棋”按钮文字（表示引擎执红还是执黑）。 */
+    private String sideText() {
+        return engineRed() ? "引擎执红" : "引擎执黑";
     }
 
     private void initClockCombo() {
@@ -474,7 +557,7 @@ public class GameController implements EngineCallBack {
 
     private void setControlsLocked(boolean locked) {
         skillComboBox.setDisable(locked);
-        sideComboBox.setDisable(locked);
+        sideButton.setDisable(locked);
         clockComboBox.setDisable(locked);
         settingButton.setDisable(locked);
         startButton.setDisable(locked);
@@ -721,6 +804,19 @@ public class GameController implements EngineCallBack {
     void settingButtonClick(ActionEvent e) {
         // 引擎高级参数与对弈开局库在弹窗中设置，直接读写 gameConfig
         App.openGameSetting(gameConfig);
+    }
+
+    @FXML
+    void sideButtonClick(ActionEvent e) {
+        // 点击在“引擎执红 / 引擎执黑”之间切换
+        gameConfig.setEngineSide(engineRed() ? "black" : "red");
+        // 玩家执黑时自动翻转棋盘，保证玩家一方在下方
+        isReverse = engineRed();
+        if (board != null) {
+            board.reverse(isReverse);
+        }
+        layoutClockOrder();
+        sideButton.setText(sideText());
     }
 
     @FXML

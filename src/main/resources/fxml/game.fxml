@@ -16,11 +16,11 @@
         <HBox alignment="CENTER_LEFT" minHeight="-Infinity" prefHeight="40.0" spacing="6.0" styleClass="tool-bar">
             <children>
                 <Label text="棋力" />
-                <ComboBox fx:id="skillComboBox" prefWidth="96.0" />
+                <ComboBox fx:id="skillComboBox" maxWidth="96.0" minWidth="96.0" prefWidth="96.0" />
                 <Label text="执棋" />
-                <ComboBox fx:id="sideComboBox" prefWidth="110.0" />
+                <Button fx:id="sideButton" maxWidth="96.0" minWidth="96.0" mnemonicParsing="false" onAction="#sideButtonClick" prefWidth="96.0" text="引擎执黑" />
                 <Label text="局时" />
-                <ComboBox fx:id="clockComboBox" prefWidth="80.0" />
+                <ComboBox fx:id="clockComboBox" maxWidth="96.0" minWidth="96.0" prefWidth="96.0" />
                 <Button fx:id="startButton" mnemonicParsing="false" onAction="#startButtonClick" prefHeight="26.0" prefWidth="84.0" styleClass="primary-button" text="开始对弈">
                     <HBox.margin>
                         <Insets left="10.0" />
