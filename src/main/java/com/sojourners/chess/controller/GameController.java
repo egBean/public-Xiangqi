@@ -307,9 +307,6 @@ public class GameController implements EngineCallBack {
     /** 左右两侧为时钟 / 状态文字预留的最小宽度 */
     private static final double SIDE_MIN = 240;
 
-    /** 引擎模拟延迟出招时为步时保留的安全余量：延迟最多用到“剩余步时 - 该值” */
-    private static final long ENGINE_DELAY_SAFETY_MILLIS = 10_000L;
-
     /** 棋盘随窗口大小动态自适应 */
     private void initAutoFitBoard() {
         rootPane.widthProperty().addListener((obs, o, n) -> autoFitBoard());
@@ -627,12 +624,13 @@ public class GameController implements EngineCallBack {
     /** 轮到新的一方走棋时，重置其步时可用时间。 */
     private void resetMoveClock() {
         int s = redGo ? 0 : 1;
-        if (mainLeft[s] > 0) {
-            moveLeft[s] = clockTier().getPerMoveMillis();
-        } else {
-            moveLeft[s] = clockTier().getBonusMillis();
-        }
+        moveLeft[s] = freshMoveMillis(mainLeft[s]);
         updateClockLabels();
+    }
+
+    /** 一步的“步时”满值：局时未用完 → 步时；局时用完 → 每步加秒。 */
+    private long freshMoveMillis(long mainLeft) {
+        return mainLeft > 0 ? clockTier().getPerMoveMillis() : clockTier().getBonusMillis();
     }
 
     private void startClock() {
@@ -895,9 +893,6 @@ public class GameController implements EngineCallBack {
         snapshot.setClockTier(gameConfig.getClockTier());
         snapshot.setRedMain(mainLeft[0]);
         snapshot.setBlackMain(mainLeft[1]);
-        snapshot.setRedMove(moveLeft[0]);
-        snapshot.setBlackMove(moveLeft[1]);
-        snapshot.setSavedAt(System.currentTimeMillis());
         GameSnapshot.save(snapshot);
 
         // 回到主菜单（showMenu 内部会 dispose 当前控制器并保存窗口位置）
@@ -965,12 +960,12 @@ public class GameController implements EngineCallBack {
         board.browseChessRecord(initialFen, new ArrayList<>(moves));
         board.setStepSound(sound);
         board.reverse(isReverse);
-        // 时间：局时与步时都按快照恢复（封棋时当前一手已消耗的步时继续生效），
-        // 同时由 delayedPlay 对“引擎延迟出招”做封顶，避免恢复后引擎超时
+        // 时间：局时按快照恢复；步时直接“白送”满值
+        // （局时用完送加秒、否则送步时），双方都刷新保证显示一致
         mainLeft[0] = snapshot.getRedMain();
         mainLeft[1] = snapshot.getBlackMain();
-        moveLeft[0] = snapshot.getRedMove();
-        moveLeft[1] = snapshot.getBlackMove();
+        moveLeft[0] = freshMoveMillis(mainLeft[0]);
+        moveLeft[1] = freshMoveMillis(mainLeft[1]);
         updateClockLabels();
         // 开始对局
         if (!loadEngine()) {
@@ -1192,15 +1187,8 @@ public class GameController implements EngineCallBack {
 
     private void delayedPlay(String move, long gen) {
         // 出招延迟独立于引擎思考时间：引擎算 3s、延迟 10s，则引擎算完后再等 10s（共约 13s）。
-        // 延迟区间已按“加时 - 10s”设计（20→5~10 / 30→10~20 / 60→30~50）。
-        // 封棋恢复后步时是“已消耗过”的剩余值，这里再对延迟做封顶：
-        // 最多用到“当前行棋方剩余步时 - 10s”，保证不会因为模拟延迟而超时。
+        // 延迟区间已按“加时 - 10s”设计（20→5~10 / 30→10~20 / 60→30~50），不会超时。
         long wait = clockTier().randomDelayMillis();
-        int side = redGo ? 0 : 1;
-        long safe = Math.max(0, moveLeft[side] - ENGINE_DELAY_SAFETY_MILLIS);
-        if (wait > safe) {
-            wait = safe;
-        }
         try {
             Thread.sleep(wait);
         } catch (InterruptedException e) {

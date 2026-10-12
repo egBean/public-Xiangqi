@@ -42,13 +42,6 @@ public class GameSnapshot implements Serializable {
     private long redMain;
     private long blackMain;
 
-    /** 封棋时双方剩余步时（毫秒） */
-    private long redMove;
-    private long blackMove;
-
-    /** 封棋时间 */
-    private long savedAt;
-
     // ===================== 持久化 =====================
 
     private static File file() {
@@ -147,29 +140,5 @@ public class GameSnapshot implements Serializable {
 
     public void setBlackMain(long blackMain) {
         this.blackMain = blackMain;
-    }
-
-    public long getRedMove() {
-        return redMove;
-    }
-
-    public void setRedMove(long redMove) {
-        this.redMove = redMove;
-    }
-
-    public long getBlackMove() {
-        return blackMove;
-    }
-
-    public void setBlackMove(long blackMove) {
-        this.blackMove = blackMove;
-    }
-
-    public long getSavedAt() {
-        return savedAt;
-    }
-
-    public void setSavedAt(long savedAt) {
-        this.savedAt = savedAt;
     }
 }
