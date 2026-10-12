@@ -103,10 +103,14 @@
         </VBox>
     </left>
     <right>
-        <VBox fx:id="rightPanel" alignment="CENTER" spacing="6.0" style="-fx-padding: 10px 14px 10px 14px;" BorderPane.alignment="CENTER">
+        <StackPane fx:id="rightPanel" alignment="BOTTOM_RIGHT" style="-fx-padding: 10px 14px 10px 14px;" BorderPane.alignment="CENTER">
             <children>
-                <Label fx:id="statusLabel" alignment="CENTER" maxWidth="Infinity" minHeight="24.0" style="-fx-font-size: 30px; -fx-font-weight: bold;" styleClass="status-label" text="请设置对弈配置后开始" textAlignment="CENTER" wrapText="true" />
+                <StackPane fx:id="statusOverlay" maxHeight="-Infinity" maxWidth="-Infinity" styleClass="status-overlay" StackPane.alignment="BOTTOM_RIGHT">
+                    <children>
+                        <Label fx:id="statusLabel" alignment="CENTER" maxHeight="Infinity" maxWidth="Infinity" styleClass="status-text" text="请设置对弈配置后开始" textAlignment="CENTER" wrapText="true" />
+                    </children>
+                </StackPane>
             </children>
-        </VBox>
+        </StackPane>
     </right>
 </BorderPane>

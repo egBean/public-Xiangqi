@@ -74,3 +74,37 @@
 .dark-theme .clock-caption {
     -fx-text-fill: #9aa79f;
 }
+
+/* ===================== 对弈棋盘右下角状态浮层 ===================== */
+
+/* 半透明底色，保证与任意背景（含 skin/back.png）都能看清文字 */
+.status-overlay {
+    -fx-background-color: rgba(0, 0, 0, 0.46);
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.55);
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 8;
+}
+
+.status-overlay:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.58);
+}
+
+.status-text {
+    -fx-text-fill: #ffffff;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.85), 5, 0.4, 0, 1);
+}
+
+.dark-theme .status-overlay {
+    -fx-background-color: rgba(10, 14, 12, 0.52);
+    -fx-border-color: rgba(220, 228, 223, 0.50);
+}
+
+.dark-theme .status-overlay:hover {
+    -fx-background-color: rgba(10, 14, 12, 0.64);
+}
+
+.dark-theme .status-text {
+    -fx-text-fill: #f1f5f2;
+}

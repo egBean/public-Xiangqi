@@ -14,6 +14,7 @@ import com.sojourners.chess.openbook.OpenBook;
 import com.sojourners.chess.openbook.PfOpenBook;
 import com.sojourners.chess.openbook.XqbOpenBook;
 import com.sojourners.chess.util.DialogUtils;
+import com.sojourners.chess.util.PathUtils;
 import com.sojourners.chess.util.StringUtils;
 import com.sojourners.chess.util.XiangqiUtils;
 import javafx.animation.KeyFrame;
@@ -27,8 +28,15 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
+import javafx.scene.image.Image;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundImage;
+import javafx.scene.layout.BackgroundPosition;
+import javafx.scene.layout.BackgroundRepeat;
+import javafx.scene.layout.BackgroundSize;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -55,6 +63,8 @@ public class GameController implements EngineCallBack {
     @FXML
     private StackPane canvasPane;
     @FXML
+    private StackPane statusOverlay;
+    @FXML
     private Canvas canvas;
     @FXML
     private Label statusLabel;
@@ -75,7 +85,7 @@ public class GameController implements EngineCallBack {
     @FXML
     private VBox leftPanel;
     @FXML
-    private VBox rightPanel;
+    private StackPane rightPanel;
     @FXML
     private VBox clockBox;
     @FXML
@@ -100,6 +110,9 @@ public class GameController implements EngineCallBack {
     private GameConfig gameConfig;
     private ChessBoard board;
     private Engine engine;
+
+    /** 状态文字过长时悬停显示的完整内容提示 */
+    private Tooltip statusTooltip;
 
     private boolean redGo = true;
     private boolean isReverse = false;
@@ -133,10 +146,51 @@ public class GameController implements EngineCallBack {
         initClockCombo();
         initClockDisplay();
 
+        applyBackgroundImage();
+        initStatusOverlay();
+
         showConfigView();
         setVisible(reviewButton, false);
         setControlsLocked(false);
         setStatus("请设置对弈配置后开始");
+    }
+
+    /**
+     * 对弈模式背景图片：若 skin/back.png 存在，则将其作为整个对弈界面的背景。
+     * 图片随窗口大小自动缩放铺满（cover），文件不存在时保持主题默认背景。
+     */
+    private void applyBackgroundImage() {
+        if (rootPane == null) {
+            return;
+        }
+        Image image = loadBackgroundImage();
+        if (image == null) {
+            return;
+        }
+        BackgroundSize size = new BackgroundSize(1.0, 1.0, true, true, false, true);
+        BackgroundImage bg = new BackgroundImage(image, BackgroundRepeat.NO_REPEAT, BackgroundRepeat.NO_REPEAT,
+                BackgroundPosition.CENTER, size);
+        rootPane.setBackground(new Background(bg));
+    }
+
+    /** 查找对弈背景图 skin/back.png（兼容 IDE 工作目录与打包后的 jar 目录）。 */
+    private Image loadBackgroundImage() {
+        File file = new File("skin", "back.png");
+        if (!file.isFile()) {
+            String jarPath = PathUtils.getJarPath();
+            if (jarPath != null) {
+                file = new File(jarPath, "skin/back.png");
+            }
+        }
+        if (!file.isFile()) {
+            return null;
+        }
+        try {
+            return new Image(file.toURI().toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private void initBoard() {
@@ -181,10 +235,7 @@ public class GameController implements EngineCallBack {
         if (rightPanel != null) {
             rightPanel.setPrefWidth(side);
         }
-        // 状态文字区域随该宽度动态调整，左右各留 1/10 空白后居中
-        if (statusLabel != null) {
-            statusLabel.setMaxWidth(Math.max(1, side * 0.8));
-        }
+        // 右栏为棋盘右侧的空白区域，状态浮层位于其右下角
         applyClockScale(side);
         layoutClockOrder();
     }
@@ -214,19 +265,66 @@ public class GameController implements EngineCallBack {
             }
         }
         applyClockLayout(side, lo);
-        applyStatusScale(lo);
     }
 
-    /** 棋盘右侧提示文字与外边距随窗体缩放（与时钟基准字号成比例，限制在合理范围）。 */
-    private void applyStatusScale(double baseFontSize) {
-        if (statusLabel != null) {
-            double f = Math.max(14, Math.min(48, baseFontSize * 0.58));
-            statusLabel.setStyle("-fx-font-size: " + Math.round(f) + "px; -fx-font-weight: bold;");
+    /**
+     * 初始化棋盘右侧空白区域底部的状态栏。
+     * 宽度占满右栏，高度为右栏的 1/4，靠右下角对齐。
+     */
+    private void initStatusOverlay() {
+        if (rightPanel == null || statusOverlay == null) {
+            return;
         }
-        if (rightPanel != null) {
-            double pad = Math.max(6, baseFontSize * 0.27);
-            rightPanel.setStyle("-fx-padding: 10px " + Math.round(pad) + "px 10px "
-                    + Math.round(pad) + "px;");
+        statusOverlay.prefWidthProperty().bind(rightPanel.widthProperty());
+        statusOverlay.prefHeightProperty().bind(rightPanel.heightProperty().divide(4));
+        statusOverlay.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        statusOverlay.widthProperty().addListener((obs, o, n) -> applyStatusScale());
+        statusOverlay.heightProperty().addListener((obs, o, n) -> applyStatusScale());
+        if (statusLabel != null) {
+            statusLabel.widthProperty().addListener((obs, o, n) -> updateStatusTooltip());
+            statusLabel.heightProperty().addListener((obs, o, n) -> updateStatusTooltip());
+        }
+    }
+
+    /** 状态文字字号随浮层大小缩放。 */
+    private void applyStatusScale() {
+        if (statusLabel == null || statusOverlay == null) {
+            return;
+        }
+        double w = statusOverlay.getWidth();
+        double h = statusOverlay.getHeight();
+        if (w <= 0 || h <= 0) {
+            return;
+        }
+        double f = Math.max(13, Math.min(40, Math.min(w, h) * 0.13));
+        statusLabel.setStyle("-fx-font-size: " + Math.round(f) + "px; -fx-font-weight: bold;");
+        updateStatusTooltip();
+    }
+
+    /**
+     * 文字过长（超出浮层可视高度）时安装 Tooltip，鼠标悬停显示完整内容；
+     * 文字放得下时移除 Tooltip。
+     */
+    private void updateStatusTooltip() {
+        if (statusLabel == null || statusOverlay == null) {
+            return;
+        }
+        statusLabel.applyCss();
+        double w = statusLabel.getWidth();
+        double h = statusLabel.getHeight();
+        boolean overflow = w > 1 && h > 1 && statusLabel.prefHeight(w) > h + 1;
+        if (overflow) {
+            if (statusTooltip == null) {
+                statusTooltip = new Tooltip();
+                statusTooltip.setWrapText(true);
+                statusTooltip.setMaxWidth(360);
+                statusTooltip.textProperty().bind(statusLabel.textProperty());
+                Tooltip.install(statusOverlay, statusTooltip);
+            }
+        } else if (statusTooltip != null) {
+            Tooltip.uninstall(statusOverlay, statusTooltip);
+            statusTooltip.textProperty().unbind();
+            statusTooltip = null;
         }
     }
 
@@ -900,6 +998,8 @@ public class GameController implements EngineCallBack {
 
     private void setStatus(String text) {
         statusLabel.setText(text);
+        // 布局更新后再按实际尺寸判断是否需要悬停提示
+        Platform.runLater(this::updateStatusTooltip);
     }
 
     public GameConfig getGameConfig() {
@@ -937,7 +1037,7 @@ public class GameController implements EngineCallBack {
         Platform.runLater(() -> {
             if (started) {
                 // 只提示思考中，不在状态栏显示深度/分数
-                statusLabel.setText("引擎思考中...");
+                setStatus("引擎思考中...");
             }
         });
     }
