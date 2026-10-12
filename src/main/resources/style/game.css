@@ -6,13 +6,13 @@
     -fx-background-radius: 12;
     -fx-border-radius: 12;
     -fx-border-width: 1;
-    -fx-background-color: rgba(15, 20, 26, 0.34);
+    -fx-background-color: rgba(15, 20, 26, 0.55);
     -fx-border-color: rgba(255, 255, 255, 0.45);
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 10, 0.3, 0, 2);
 }
 
 .clock-panel.clock-panel-active {
-    -fx-background-color: rgba(15, 20, 26, 0.5);
+    -fx-background-color: rgba(15, 20, 26, 0.68);
     -fx-border-color: #e2a400;
     -fx-border-width: 2;
 }
@@ -52,13 +52,13 @@
 
 /* 深色主题：与主菜单一致，两种主题使用同一套毛玻璃配色 */
 .dark-theme .clock-panel {
-    -fx-background-color: rgba(15, 20, 26, 0.34);
+    -fx-background-color: rgba(15, 20, 26, 0.55);
     -fx-border-color: rgba(255, 255, 255, 0.45);
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.65), 10, 0.3, 0, 2);
 }
 
 .dark-theme .clock-panel.clock-panel-active {
-    -fx-background-color: rgba(15, 20, 26, 0.5);
+    -fx-background-color: rgba(15, 20, 26, 0.68);
     -fx-border-color: #75a58f;
 }
 
@@ -82,7 +82,7 @@
 
 /* 半透明底色 + 磨砂玻璃，保证与任意背景（含 skin/back.png）都能看清文字 */
 .status-overlay {
-    -fx-background-color: rgba(15, 20, 26, 0.34);
+    -fx-background-color: rgba(15, 20, 26, 0.55);
     -fx-background-radius: 12;
     -fx-border-color: rgba(255, 255, 255, 0.45);
     -fx-border-radius: 12;
@@ -92,7 +92,7 @@
 }
 
 .status-overlay:hover {
-    -fx-background-color: rgba(15, 20, 26, 0.48);
+    -fx-background-color: rgba(15, 20, 26, 0.68);
 }
 
 .status-text {
@@ -101,12 +101,12 @@
 }
 
 .dark-theme .status-overlay {
-    -fx-background-color: rgba(15, 20, 26, 0.34);
+    -fx-background-color: rgba(15, 20, 26, 0.55);
     -fx-border-color: rgba(255, 255, 255, 0.45);
 }
 
 .dark-theme .status-overlay:hover {
-    -fx-background-color: rgba(15, 20, 26, 0.48);
+    -fx-background-color: rgba(15, 20, 26, 0.68);
 }
 
 .dark-theme .status-text {
