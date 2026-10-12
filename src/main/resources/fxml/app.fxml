@@ -146,9 +146,9 @@
         <center>
             <BorderPane BorderPane.alignment="CENTER">
                 <top>
-                    <HBox alignment="CENTER_LEFT">
+                    <HBox alignment="CENTER_LEFT" style="-fx-padding: 0; -fx-spacing: 0;" styleClass="tool-bar">
                         <children>
-                            <ToolBar maxWidth="Infinity" HBox.hgrow="ALWAYS" minHeight="-Infinity" minWidth="-Infinity" prefHeight="30.0">
+                            <ToolBar maxWidth="Infinity" HBox.hgrow="ALWAYS" minHeight="-Infinity" minWidth="-Infinity" prefHeight="30.0" style="-fx-background-color: transparent; -fx-background-insets: 0; -fx-border-color: transparent; -fx-border-width: 0;">
                                 <items>
                             <Button fx:id="newButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#newButtonClick" style="-fx-background-image: url('/image/file-plus.png');" stylesheets="@../style/app.css" text="新建">
                                 <opaqueInsets>

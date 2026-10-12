@@ -217,7 +217,7 @@ mvn javafx:run             # 通过插件运行主类
 
 `App` 现在通过 `showMenu() / showManual() / showGame()` 在同一 `mainStage` 上切换 Scene；切换前调用当前控制器的 `dispose()` 清理资源。`Controller#exit()` 仍负责真正退出（多调用一次 `OpenBookManager.close()`），新增 `Controller#dispose()` 与 `returnToMenuClick`。
 
-**对弈模式顶部工具栏**（`game.fxml`，带 `tool-bar` 样式的 `HBox`）：左侧依次是“棋力 / 执棋 / 局时”：棋力、局时为下拉框；“执棋”改为按钮 `sideButton`，点击在“引擎执红 / 引擎执黑”之间切换（`GameController#sideButtonClick`，同步翻转棋盘与时钟上下顺序），无需下拉选择（原“出招速度”已移除，出招延迟改由局时档位决定）；紧接着是“开始对弈 / 认输 / 封棋”（开始对弈与 认输/封棋 交替显示，靠左，与引擎设置同区），其后 `Region` 占位，最右是“设置”“返回主菜单”。时钟在左栏（`leftPanel`/`clockBox`），对局状态文字位于棋盘右侧空白区域（`rightPanel`）底部：宽度占满该区域，高度为其 1/4（详见本节“状态浮层”）。`GameController#autoFitBoard` 先按窗口宽度减左右最小预留 `SIDE_MIN=240` 定棋盘大小，再把左右栏 `prefWidth` 设为棋盘两侧的实际区域宽度 `(总宽 - 棋盘宽)/2`，使左右栏正好等于“棋盘边 ~ 窗体边”的区域（右栏现在仅为保持棋盘居中的空占位）。`app.fxml` 的“返回主菜单”同样在顶部工具栏最右（外层 `HBox` 包裹 `ToolBar` + 按钮）。
+**对弈模式顶部工具栏**（`game.fxml`，带 `tool-bar` 样式的 `HBox`）：左侧依次是“棋力 / 执棋 / 局时”：棋力、局时为下拉框；“执棋”改为按钮 `sideButton`，点击在“引擎执红 / 引擎执黑”之间切换（`GameController#sideButtonClick`，同步翻转棋盘与时钟上下顺序），无需下拉选择（原“出招速度”已移除，出招延迟改由局时档位决定）；紧接着是“开始对弈 / 认输 / 封棋”（开始对弈与 认输/封棋 交替显示，靠左，与引擎设置同区），其后 `Region` 占位，最右是“设置”“返回主菜单”。时钟在左栏（`leftPanel`/`clockBox`），对局状态文字位于棋盘右侧空白区域（`rightPanel`）底部：宽度占满该区域，高度为其 1/4（详见本节“状态浮层”）。`GameController#autoFitBoard` 先按窗口宽度减左右最小预留 `SIDE_MIN=240` 定棋盘大小，再把左右栏 `prefWidth` 设为棋盘两侧的实际区域宽度 `(总宽 - 棋盘宽)/2`，使左右栏正好等于“棋盘边 ~ 窗体边”的区域（右栏现在仅为保持棋盘居中的空占位）。`app.fxml` 的“返回主菜单”同样在顶部工具栏最右（外层 `HBox` 包裹 `ToolBar` + 按钮）。注意：该 `HBox` 需带 `styleClass="tool-bar"`（并把内层 `ToolBar` 设为透明背景/边框、HBox 自身 `-fx-padding/-fx-spacing: 0`），否则“返回主菜单”按钮落在工具栏之外，拿不到 `.tool-bar .button` 样式，在默认（浅色）主题下会露出普通按钮的白色高光边框。
 
 ### 8.1 对弈模式配置隔离
 
