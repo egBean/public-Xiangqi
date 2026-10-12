@@ -28,12 +28,19 @@
     -fx-cursor: hand;
 }
 
+/* 悬停：整体亮起 */
 .dark-theme .menu-button:hover,
-.light-theme .menu-button:hover,
-.dark-theme .menu-button:focused,
-.light-theme .menu-button:focused {
+.light-theme .menu-button:hover {
     -fx-background-color: rgba(255, 255, 255, 0.24);
     -fx-border-color: rgba(255, 255, 255, 0.9);
+}
+
+/* 键盘焦点：仅用 :focus-visible，避免默认聚焦/鼠标点击时多出一圈白边 */
+.dark-theme .menu-button:focus-visible,
+.light-theme .menu-button:focus-visible {
+    -fx-background-color: rgba(15, 20, 26, 0.34);
+    -fx-border-color: rgba(255, 255, 255, 0.9);
+    -fx-border-width: 2px;
 }
 
 .dark-theme .menu-button:pressed,
