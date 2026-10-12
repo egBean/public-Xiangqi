@@ -215,7 +215,7 @@ mvn javafx:run             # 通过插件运行主类
 | 打谱 | 进入原 `app.fxml`（`Controller`）分析/棋谱主界面 |
 | 训练 | 暂为占位提示（“开发中”） |
 
-主菜单视觉（`MenuController#initialize` + `style/menu.css`，由 `App.showMenu` 在 `applyTheme` 后加载）：根 `StackPane` 用 `skin/menuBack.png` 作为 cover 居中铺满的背景图（`MenuController#loadBackgroundImage` 同样兼容 IDE 工作目录与打包后 jar 目录，文件不存在则保持主题默认背景）；三个入口按钮各自包在 `StackPane.menu-button-wrap`（`playButtonWrap/manualButtonWrap/trainButtonWrap`，高 62）里，`installFrostedGlass` 在按钮下方插入一层与背景图完全对齐的高斯模糊 `ImageView`（`FROST_BLUR=18`、圆角 `FROST_ARC=16`、外扩 `FROST_MARGIN=24`，逻辑与 `GameController` 的磨砂面板一致，背景图 cover 对齐计算相同），形成毛玻璃；按钮本体用 `.menu-button`（半透明深色底罩 `rgba(15,20,26,0.34)` + 白色 25px 粗体 + 投影）保证文字清晰，标题/副标题 `.menu-title/.menu-subtitle` 也加投影防与背景冲突。CSS 选择器写成 `.dark-theme .menu-button` / `.light-theme .menu-button` 以压过主题里的 `.dark-theme .button`。
+主菜单视觉（`MenuController#initialize` + `style/menu.css`，由 `App.showMenu` 在 `applyTheme` 后加载）：根 `StackPane` 用 `skin/menuBack.png` 作为 cover 居中铺满的背景图（`MenuController#loadBackgroundImage` 同样兼容 IDE 工作目录与打包后 jar 目录，文件不存在则保持主题默认背景）；三个入口按钮各自包在 `StackPane.menu-button-wrap`（`playButtonWrap/manualButtonWrap/trainButtonWrap`，高 62）里，`installFrostedGlass` 在按钮下方插入一层与背景图完全对齐的高斯模糊 `ImageView`（`FROST_BLUR=18`、圆角 `FROST_ARC=16`、外扩 `FROST_MARGIN=24`，逻辑与 `GameController` 的磨砂面板一致，背景图 cover 对齐计算相同），形成毛玻璃；按钮本体用 `.menu-button`（半透明深色底罩 `rgba(15,20,26,0.34)` + 白色 25px 粗体 + 投影）保证文字清晰，标题/副标题 `.menu-title/.menu-subtitle` 也加投影防与背景冲突。CSS 选择器写成 `.dark-theme .menu-button` / `.light-theme .menu-button` 以压过主题里的 `.dark-theme .button`。主菜单窗口的位置与大小会被记忆：`MenuController#dispose()`（由 `App#disposeCurrentController` 在切换模式或退出时调用）把 `mainStage` 的 X/Y/宽/高写入 `Properties.menuStageX/Y/Width/Height + menuStagePositionSet` 并 `save()`；`App#showMenu` 加载时若已记录则 `setWidth/Height` 与 `setX/Y`，否则仍 `sizeToScene()` + `centerOnScreen()`。
 
 `App` 现在通过 `showMenu() / showManual() / showGame()` 在同一 `mainStage` 上切换 Scene；切换前调用当前控制器的 `dispose()` 清理资源。`Controller#exit()` 仍负责真正退出（多调用一次 `OpenBookManager.close()`），新增 `Controller#dispose()` 与 `returnToMenuClick`。
 
@@ -223,7 +223,7 @@ mvn javafx:run             # 通过插件运行主类
 
 ### 8.1 对弈模式配置隔离
 
-**配置独立原则**：对弈、打谱、训练三种模式的配置尽量完全独立、单独保存。当前对弈用 `model/GameConfig.java`（jar 目录下 `gameConfig`），打谱用 `config/Properties`（jar 目录下 `properties`），训练尚未实现、实现时必须使用自己的独立配置文件，不得复用以上两者。窗口位置/大小也按模式分别记忆：对弈存在 `GameConfig.stageX/Y/Width/Height + stagePositionSet`，打谱存在 `Properties.stageX/Y + stagePositionSet`（在各自 `dispose()` 时写入、`App#showGame/showManual` 时恢复）。棋盘样式、棋步提示、走棋音效、显示序号等界面偏好不单独区分，对弈模式直接沿用打谱模式的 `Properties`。
+**配置独立原则**：对弈、打谱、训练三种模式的配置尽量完全独立、单独保存。当前对弈用 `model/GameConfig.java`（jar 目录下 `gameConfig`），打谱用 `config/Properties`（jar 目录下 `properties`），训练尚未实现、实现时必须使用自己的独立配置文件，不得复用以上两者。窗口位置/大小也按模式分别记忆：对弈存在 `GameConfig.stageX/Y/Width/Height + stagePositionSet`，打谱存在 `Properties.stageX/Y/Width/Height + stagePositionSet`，主菜单存在 `Properties.menuStageX/Y/Width/Height + menuStagePositionSet`（分别在 `GameController#dispose`/`Controller#dispose`/`MenuController#dispose` 时写入，`App#showGame/showManual/showMenu` 时恢复）。棋盘样式、棋步提示、走棋音效、显示序号等界面偏好不单独区分，对弈模式直接沿用打谱模式的 `Properties`。
 
 对弈模式使用独立模型 `model/GameConfig.java`，单独序列化保存到 jar 目录下 `gameConfig` 文件，与分析模式 `config/Properties` 完全隔离：
 

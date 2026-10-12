@@ -9,6 +9,7 @@ import com.sojourners.chess.controller.EngineManageController;
 import com.sojourners.chess.controller.GameController;
 import com.sojourners.chess.controller.GameSettingController;
 import com.sojourners.chess.controller.LocalBookController;
+import com.sojourners.chess.controller.MenuController;
 import com.sojourners.chess.model.EngineConfig;
 import com.sojourners.chess.model.GameConfig;
 import com.sojourners.chess.openbook.OpenBookManager;
@@ -48,6 +49,7 @@ public class App extends Application {
     private static Stage deduction;
     private static Stage gameSetting;
     private static DeductionController deductionController;
+    private static MenuController menuController;
     private static Controller manualController;
     private static GameController gameController;
 
@@ -84,10 +86,21 @@ public class App extends Application {
             Scene scene = new Scene(root);
             applyTheme(scene);
             scene.getStylesheets().add(MENU_STYLE);
+            MenuController controller = fxmlLoader.getController();
+            menuController = controller;
             mainStage.setScene(scene);
             mainStage.setTitle("TCHESS  V" + VERSION);
-            mainStage.sizeToScene();
-            mainStage.centerOnScreen();
+            // 恢复主菜单窗口位置与大小
+            Properties menuProp = Properties.getInstance();
+            if (menuProp.isMenuStagePositionSet()) {
+                mainStage.setWidth(menuProp.getMenuStageWidth());
+                mainStage.setHeight(menuProp.getMenuStageHeight());
+                mainStage.setX(menuProp.getMenuStageX());
+                mainStage.setY(menuProp.getMenuStageY());
+            } else {
+                mainStage.sizeToScene();
+                mainStage.centerOnScreen();
+            }
             mainStage.show();
         } catch (Exception e) {
             e.printStackTrace();
@@ -191,6 +204,10 @@ public class App extends Application {
     }
 
     private static void disposeCurrentController() {
+        if (menuController != null) {
+            menuController.dispose();
+            menuController = null;
+        }
         if (manualController != null) {
             manualController.dispose();
             manualController = null;

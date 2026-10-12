@@ -62,6 +62,17 @@ public class Properties implements Serializable {
 
     private double stageY;
 
+    /** 主菜单窗口位置/大小是否已记录（独立于对弈/打谱模式） */
+    private boolean menuStagePositionSet = false;
+
+    private double menuStageX;
+
+    private double menuStageY;
+
+    private double menuStageWidth;
+
+    private double menuStageHeight;
+
     private double splitPos;
     private double splitPos2;
 
@@ -502,6 +513,48 @@ public class Properties implements Serializable {
 
     public void setStageHeight(double stageHeight) {
         this.stageHeight = stageHeight;
+    }
+
+    public boolean isMenuStagePositionSet() {
+        return menuStagePositionSet;
+    }
+
+    public void setMenuStagePositionSet(boolean menuStagePositionSet) {
+        this.menuStagePositionSet = menuStagePositionSet;
+    }
+
+    public double getMenuStageX() {
+        return menuStageX;
+    }
+
+    public void setMenuStageX(double menuStageX) {
+        this.menuStageX = menuStageX;
+    }
+
+    public double getMenuStageY() {
+        return menuStageY;
+    }
+
+    public void setMenuStageY(double menuStageY) {
+        this.menuStageY = menuStageY;
+    }
+
+    /** 主菜单窗口宽度，旧配置未记录时回退到默认布局宽度。 */
+    public double getMenuStageWidth() {
+        return menuStageWidth > 0 ? menuStageWidth : 480;
+    }
+
+    public void setMenuStageWidth(double menuStageWidth) {
+        this.menuStageWidth = menuStageWidth;
+    }
+
+    /** 主菜单窗口高度，旧配置未记录时回退到默认布局高度。 */
+    public double getMenuStageHeight() {
+        return menuStageHeight > 0 ? menuStageHeight : 560;
+    }
+
+    public void setMenuStageHeight(double menuStageHeight) {
+        this.menuStageHeight = menuStageHeight;
     }
 
     public double getSplitPos() {

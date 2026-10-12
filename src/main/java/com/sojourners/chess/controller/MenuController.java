@@ -1,6 +1,7 @@
 package com.sojourners.chess.controller;
 
 import com.sojourners.chess.App;
+import com.sojourners.chess.config.Properties;
 import com.sojourners.chess.util.DialogUtils;
 import com.sojourners.chess.util.PathUtils;
 import javafx.application.Platform;
@@ -72,6 +73,24 @@ public class MenuController {
     @FXML
     void trainButtonClick(ActionEvent event) {
         DialogUtils.showInfoDialog("训练", "训练模式开发中，敬请期待。");
+    }
+
+    /**
+     * 离开主菜单时记录窗口位置与大小，供下次进入主菜单时恢复。
+     * 由 {@code App#disposeCurrentController()} 在切换模式或退出时调用。
+     */
+    public void dispose() {
+        javafx.stage.Stage stage = App.getMainStage();
+        if (stage == null || !stage.isShowing()) {
+            return;
+        }
+        Properties prop = Properties.getInstance();
+        prop.setMenuStageX(stage.getX());
+        prop.setMenuStageY(stage.getY());
+        prop.setMenuStageWidth(stage.getWidth());
+        prop.setMenuStageHeight(stage.getHeight());
+        prop.setMenuStagePositionSet(true);
+        prop.save();
     }
 
     // ===================== 背景图 =====================
