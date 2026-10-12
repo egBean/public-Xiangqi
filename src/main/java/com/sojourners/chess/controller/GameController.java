@@ -279,11 +279,18 @@ public class GameController implements EngineCallBack {
         double m = FROST_MARGIN / scale;
         double x0 = Math.max(0, vx - m);
         double y0 = Math.max(0, vy - m);
-        double x1 = Math.min(imgW, vx + vw + m);
-        double y1 = Math.min(imgH, vy + vh + m);
-        frost.setViewport(new Rectangle2D(x0, y0, x1 - x0, y1 - y0));
-        frost.setFitWidth((x1 - x0) * scale);
-        frost.setFitHeight((y1 - y0) * scale);
+        // 布局/缩放过程中面板可能瞬时落在背景图范围外，这里夹取到图片内，
+        // 避免 Viewport 宽高为负导致 Rectangle2D 抛 IllegalArgumentException
+        double x1 = Math.max(x0, Math.min(imgW, vx + vw + m));
+        double y1 = Math.max(y0, Math.min(imgH, vy + vh + m));
+        double vpW = x1 - x0;
+        double vpH = y1 - y0;
+        if (!(vpW > 0) || !(vpH > 0)) {
+            return;
+        }
+        frost.setViewport(new Rectangle2D(x0, y0, vpW, vpH));
+        frost.setFitWidth(vpW * scale);
+        frost.setFitHeight(vpH * scale);
         frost.relocate((x0 - vx) * scale, (y0 - vy) * scale);
         // 磨砂层向内缩 2px，保留面板自身的半透明底色与边框（含行棋方高亮边框）
         clip.setX((vx - x0) * scale + FROST_INSET);
