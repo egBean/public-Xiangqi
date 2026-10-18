@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 
 /**
  * 复盘时对每一步着法的评价等级。
- * 参考 chess.com 的分类：正着 / 优秀 / 良好 / 不精确 / 失误 / 大漏。
+ * 参考 chess.com 的分类：正着 / 优秀 / 良好 / 不精确 / 失误 / 败着。
  */
 public enum MoveQuality {
 
