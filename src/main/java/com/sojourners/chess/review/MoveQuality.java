@@ -4,17 +4,17 @@ import java.math.BigDecimal;
 
 /**
  * 复盘时对每一步着法的评价等级。
- * 参考 chess.com 的分类：最佳 / 优秀 / 良好 / 不精确 / 失误 / 大漏。
+ * 参考 chess.com 的分类：正着 / 优秀 / 良好 / 不精确 / 失误 / 大漏。
  */
 public enum MoveQuality {
 
     NONE("——", 0, ""),
-    BEST("最佳", 1, "review-best"),
+    BEST("正着", 1, "review-best"),
     EXCELLENT("优秀", 2, "review-excellent"),
     GOOD("良好", 3, "review-good"),
     INACCURACY("不精确", 4, "review-inaccuracy"),
     MISTAKE("失误", 5, "review-mistake"),
-    BLUNDER("大漏", 6, "review-blunder");
+    BLUNDER("败着", 6, "review-blunder");
 
     private final String label;
     private final int level;

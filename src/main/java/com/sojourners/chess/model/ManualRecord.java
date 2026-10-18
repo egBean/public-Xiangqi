@@ -28,7 +28,7 @@ public class ManualRecord implements Serializable {
      */
 
     /**
-     * 复盘评价，如“最佳”“大漏”。
+     * 复盘评价，如“正着”“败着”。
      */
     private transient String review;
 
