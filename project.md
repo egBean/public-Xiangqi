@@ -147,14 +147,14 @@ com.sojourners.chess
 
 ### 3.9 review/ — 棋谱复盘
 
-| 文件 | 职责 |
-| --- | --- |
-| `GameReview.java` | 复盘流程：逐局面分析棋谱、对比实际着法与引擎正着、给出评价 |
+| 文件 | 职责                                |
+| --- |-----------------------------------|
+| `GameReview.java` | 复盘流程：逐局面分析棋谱、对比实际着法与引擎正着、给出评价     |
 | `ReviewEngine.java` | 复盘专用同步引擎客户端（独立进程，逐个局面返回 bestmove） |
-| `ReviewEval.java` | 单个局面的分析结果（最佳着法、分值） |
-| `ReviewItem.java` | 单步复盘结果（损失、评价、正着等） |
-| `ReviewSummary.java` | 复盘汇总：双方各类着法数量与准确率 |
-| `MoveQuality.java` | 着法评价等级（最佳/优秀/良好/不精确/失误/大漏） |
+| `ReviewEval.java` | 单个局面的分析结果（最佳着法、分值）                |
+| `ReviewItem.java` | 单步复盘结果（损失、评价、正着等）                 |
+| `ReviewSummary.java` | 复盘汇总：双方各类着法数量与准确率                 |
+| `MoveQuality.java` | 着法评价等级（正着/优秀/良好/不精确/失误/败着）        |
 
 ### 3.10 其他包
 
