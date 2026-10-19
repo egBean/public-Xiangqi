@@ -97,8 +97,13 @@ public class ReviewSummary {
         return accuracy;
     }
 
+    /**
+     * 分值 → 走子方胜率（百分比）。
+     * <p>
+     * 直接复用 {@link GameReview#eloToWinRate(int)}，保证复盘面板里的准确率
+     * 与棋盘左侧胜率条使用同一条换算曲线。
+     */
     private static double winPercent(int cp) {
-        int value = Math.max(-3000, Math.min(3000, cp));
-        return 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * value)) - 1);
+        return GameReview.eloToWinRate(cp).doubleValue();
     }
 }
