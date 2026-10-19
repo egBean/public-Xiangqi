@@ -1,5 +1,6 @@
 package com.sojourners.chess.review;
 
+import java.math.BigDecimal;
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -25,18 +26,16 @@ public class ReviewSummary {
      *
      * @param red          是否红方走子
      * @param quality      评价等级
-     * @param scoreBefore  走子前该方视角的分值
-     * @param scoreAfter   走子后该方实际获得的分值
+     * @param winRateDrop  走这步造成的胜率降幅（与 ReviewItem 展示的是同一个值）
      */
-    public void add(boolean red, MoveQuality quality, int scoreBefore, int scoreAfter) {
+    public void add(boolean red, MoveQuality quality, BigDecimal winRateDrop) {
         if (quality == null || quality == MoveQuality.NONE) {
-            // 胜负已定、未评价的着法不参与统计
             return;
         }
         Map<MoveQuality, Integer> counts = red ? redCounts : blackCounts;
         counts.merge(quality, 1, Integer::sum);
 
-        double accuracy = accuracy(scoreBefore, scoreAfter);
+        double accuracy = accuracy(winRateDrop.doubleValue());
         if (red) {
             redAccuracySum += accuracy;
             redMoves++;
@@ -91,12 +90,9 @@ public class ReviewSummary {
      * 胜率来自 {@link GameReview#eloToWinRate(int)}，即皮卡鱼官方标准胜率
      * （200 score对应 76% 胜率）
      */
-    private static double accuracy(int scoreBefore, int scoreAfter) {
-        double winBefore = winPercent(scoreBefore);
-        double winAfter = winPercent(scoreAfter);
-        double accuracy = 103.1668 * Math.exp(-0.04354 * (winBefore - winAfter)) - 3.1669;
-        // 涨分（drop < 0）会让公式结果 > 100，统一钳到 100：涨分不算“超额准确”，
-        // 避免兑子/重复局面把准确率堆到 100 以上
+    private static double accuracy(double drop) {
+        double accuracy = 103.1668 * Math.exp(-0.04354 * drop) - 3.1669;
+        // 涨分（drop < 0）会让公式结果 > 100，统一钳到 100
         if (accuracy < 0) {
             return 0;
         }

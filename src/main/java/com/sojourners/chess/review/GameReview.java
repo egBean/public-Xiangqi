@@ -159,7 +159,7 @@ public class GameReview {
                 int evalBottom = redToMove[i] == isReverse ? -curScore : curScore;
                 // 底部一方胜率（百分比，保留两位小数）
                 BigDecimal winRateBottom = eloToWinRate(evalBottom);
-                summary.add(red, quality, scoreBefore, scoreAfter);
+                summary.add(red, quality, winRateDrop);
                 listener.onProgress(i, total, i,
                         new ReviewItem(i, move, prevBest, bestCn, loss,winRateDrop,winRateBottom, evalBottom, quality));
 
