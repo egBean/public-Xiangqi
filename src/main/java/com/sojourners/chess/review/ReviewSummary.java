@@ -86,24 +86,17 @@ public class ReviewSummary {
     }
 
     /**
-     * 胜率降幅标定系数。
-     * <p>
-     * 准确率拟合式 {@code 103.1668*exp(-0.04354*drop)-3.1669} 是按 Lichess 自己的
-     * cp→胜率曲线拟合出来的；本项目统一使用 {@link GameReview#eloToWinRate(int)}
-     * （400 分 → 76%），同样的厘兵损失在这条曲线上算出的降幅约为 Lichess 曲线的 1.55 倍，
-     * 因此先把降幅折算回去再代入，保证准确率数值仍在 0~100 的合理区间。
-     */
-    private static final double WIN_DROP_SCALE = 0.65;
-
-    /**
      * 参考 Lichess/chess.com 的准确率算法：由胜率变化换算准确率。
+     * <p>
+     * 胜率来自 {@link GameReview#eloToWinRate(int)}，即皮卡鱼官方标准胜率
+     * （200 score对应 76% 胜率）
      */
     private static double accuracy(int scoreBefore, int scoreAfter) {
         double winBefore = winPercent(scoreBefore);
         double winAfter = winPercent(scoreAfter);
-        // 只降不升：涨分不算“超额准确”，避免兑子/重复局面把准确率堆到 100 以上
-        double drop = Math.max(0, winBefore - winAfter) * WIN_DROP_SCALE;
-        double accuracy = 103.1668 * Math.exp(-0.04354 * drop) - 3.1669;
+        double accuracy = 103.1668 * Math.exp(-0.04354 * (winBefore - winAfter)) - 3.1669;
+        // 涨分（drop < 0）会让公式结果 > 100，统一钳到 100：涨分不算“超额准确”，
+        // 避免兑子/重复局面把准确率堆到 100 以上
         if (accuracy < 0) {
             return 0;
         }
