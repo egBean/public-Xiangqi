@@ -232,9 +232,12 @@
                                     <Insets />
                                 </opaqueInsets>
                             </Button>
-                            <!-- 连线与推演之间的空隙 -->
-                            <Region minWidth="36.0" prefWidth="36.0" />
-                            <Button fx:id="deductionButton" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#deductionButtonClick" prefHeight="26.0" prefWidth="52.0" style="-fx-pref-width: 52; -fx-pref-height: 26; -fx-background-insets: 0; -fx-padding: 0 6 0 6; -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: #5a3600; -fx-background-color: linear-gradient(to bottom, #ffe9a3 0%, #f3bd3c 48%, #d98f06 100%); -fx-background-radius: 7; -fx-border-color: #a8700a; -fx-border-width: 1; -fx-border-radius: 7; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 5, 0.2, 0, 2);" text="推演" />
+                            <!-- 推演：独立小棋盘（icon 按钮） -->
+                            <Button fx:id="deductionButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#deductionButtonClick" prefHeight="24.0" prefWidth="24.0" stylesheets="@../style/app.css" text="推演">
+                                <graphic>
+                                    <SVGPath content="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 20H4v-4h4v4zm0-6H4v-4h4v4zm0-6H4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4z" fill="#6d7a86" scaleX="0.62" scaleY="0.62" />
+                                </graphic>
+                            </Button>
                                 </items>
                             </ToolBar>
                             <Button fx:id="returnMenuButton" mnemonicParsing="false" onAction="#returnToMenuClick" text="返回主菜单">
@@ -337,7 +340,11 @@
                                                                                     <Button fx:id="manualBackButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#backButtonClick" prefHeight="24.0" prefWidth="24.0" style="-fx-background-image: url('/image/arrow-left.png');" stylesheets="@../style/app.css" text="Button" />
                                                                                     <Button fx:id="manualForwardButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#forwardButtonClick" prefHeight="24.0" prefWidth="24.0" style="-fx-background-image: url('/image/arrow-right.png');" stylesheets="@../style/app.css" text="Button" />
                                                                                     <Button fx:id="manualFinalButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#finalButtonClick" prefHeight="24.0" prefWidth="24.0" style="-fx-background-image: url('/image/arrow-double-right.png');" stylesheets="@../style/app.css" text="Button" />
-                                                                                    <Button fx:id="reviewButton" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#reviewButtonClick" prefHeight="24.0" prefWidth="48.0" style="-fx-pref-width: 48; -fx-pref-height: 24; -fx-background-insets: 0; -fx-padding: 0 4 0 4; -fx-font-size: 11.0;" styleClass="flat-tool-button" text="复盘" />
+                                                                                    <Button fx:id="reviewButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#reviewButtonClick" prefHeight="24.0" prefWidth="24.0" stylesheets="@../style/app.css" text="复盘">
+                                                                                        <graphic>
+                                                                                            <SVGPath content="M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM10 17H5v-2h5v2zm0-4H5v-2h5v2zm0-4H5V7h5v2zm4.82 6L12 12.16l1.41-1.41 1.41 1.42L17.99 9l1.42 1.42L14.82 15z" fill="#6d7a86" scaleX="0.62" scaleY="0.62" />
+                                                                                        </graphic>
+                                                                                    </Button>
                                                                                     <Button fx:id="manualDeleteButton" contentDisplay="GRAPHIC_ONLY" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#deleteButtonClick" prefHeight="24.0" prefWidth="24.0" style="-fx-background-image: url('/image/delete.png');" stylesheets="@../style/app.css" text="Button" />
                                                                                 </items>
                                                                             </ToolBar>
