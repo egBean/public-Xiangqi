@@ -2,16 +2,20 @@ package com.sojourners.chess.linker;
 
 import com.sojourners.chess.board.ChessBoard;
 import com.sojourners.chess.config.Properties;
+import com.sojourners.chess.util.DateUtils;
 import com.sojourners.chess.util.NativeScreenshotUtil;
 import com.sojourners.chess.util.XiangqiUtils;
 import com.sojourners.chess.yolo.ChessRecognitionModel;
 import com.sojourners.chess.yolo.OnnxModel;
 import com.sojourners.chess.yolo.Yolo11Model;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -45,6 +49,11 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     private volatile boolean pause;
 
     private Properties prop;
+
+    /**
+     * 最近一次用于识别棋盘的截图，识别异常时保存用于调试
+     */
+    private volatile BufferedImage lastBoardImg;
 
     public AbstractGraphLinker(LinkerCallBack callBack) throws AWTException {
         this.callBack = callBack;
@@ -185,6 +194,8 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                         if (action.flag == 4) {
                             count++;
                             if (count > 9) {
+                                // 连续多次可能识别到新棋局，保存棋盘截图便于排查
+                                saveErrorBoardImage();
                                 break;
                             }
                         } else {
@@ -543,6 +554,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     private boolean findChessBoard(char[][] board) {
         // 截图
         BufferedImage img = screenshot(false);
+        this.lastBoardImg = img;
         boolean result1 = findChessBoardWithModel(img, board, this.aiModel);
         if(result1){
             return true;
@@ -566,6 +578,28 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
             }
         }
         return f;
+    }
+
+    /**
+     * 识别异常时，把识别的棋盘截图保存到项目根目录 errorImg 下，便于后期调试
+     */
+    private void saveErrorBoardImage() {
+        BufferedImage img = this.lastBoardImg;
+        if (img == null) {
+            return;
+        }
+        try {
+            File dir = new File(System.getProperty("user.dir"), "errorImg");
+            if (!dir.exists() && !dir.mkdirs()) {
+                System.err.println("create errorImg dir failed: " + dir.getAbsolutePath());
+                return;
+            }
+            File file = new File(dir, "error_" + DateUtils.getDateTimeString(new Date()) + ".png");
+            ImageIO.write(img, "png", file);
+            System.out.println("save error board image: " + file.getAbsolutePath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private boolean reverse(char[][] board) throws Exception {
