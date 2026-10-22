@@ -99,7 +99,7 @@ com.sojourners.chess
 
 | 文件 | 职责 |
 | --- | --- |
-| `Engine.java` | 引擎进程管理与 UCI/UCCI 协议交互 |
+| `Engine.java` | 引擎进程管理与 UCI/UCCI 协议交互；`setOption/setOptions` 可在引擎运行中实时下发 `setoption` 并同步内部 `threadNum/hashSize/multiPV`，避免下一次 `analysis` 用旧值覆盖 |
 | `EngineCallBack.java` | 引擎输出回调 |
 
 ### 3.5 linker/ — 自动连线
@@ -187,7 +187,7 @@ com.sojourners.chess
 
 ## 6. 功能模块概览
 
-- **引擎**：配置/加载 UCI、UCCI 引擎，支持对弈与分析、时间设置。
+- **引擎**：配置/加载 UCI、UCCI 引擎，支持对弈与分析、时间设置。**引擎参数快捷修改**：引擎栏 `hashComboBox` 后的“MB”后面有一个扳手图标按钮 `engineParamButton`（`app.fxml` 内用 `SVGPath` 画扳手，样式沿用 `style/app.css` 的 `.button`；提示“引擎参数”在 `Controller#setButtonTips` 注册），点击走 `Controller#engineParamButtonClick`：用 `EngineAddController.ec = 当前引擎配置` + 直接调原本的 `App#openEngineAdd()`（弹窗标题仍为“添加引擎”，纯粹作为快捷入口，无新界面）打开引擎选项编辑弹窗；确定后比较修改前后参数——仅参数变化时 `Engine#setOptions` 直接向运行中的引擎下发 `setoption`（先 `stop`），引擎程序/协议变化时 `loadEngine(EngineConfig)` 重新加载进程，名称变化同步 `Properties.engineName` 与引擎下拉框，并把 `Threads`/`Hash` 选项回写 `Properties.threadNum/hashSize` 与两个下拉框，最后按原状态（引擎执红/执黑/分析）重新 `engineGo()`，做到不改配置、不重开程序即时生效（`multiPV` 变化会同步 `board.showMultiPV`）。
 - **连线**：自动识别屏幕棋盘并按引擎走子落子，支持后台模式与动画确认。
 - **开局库**：支持 XQB、冰河、PF 及云端开局库，可配置库招规则。
 - **局面**：编辑局面、FEN 导入导出、局面图片识别。

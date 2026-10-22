@@ -388,6 +388,54 @@ public class Engine {
         }
     }
 
+    /**
+     * 实时修改引擎选项并立即生效（应在引擎空闲时调用，如先 {@link #stop()}）。
+     *
+     * @param options 要下发的选项
+     */
+    public void setOptions(Map<String, String> options) {
+        if (options == null) {
+            return;
+        }
+        for (Map.Entry<String, String> entry : options.entrySet()) {
+            setOption(entry.getKey(), entry.getValue());
+        }
+    }
+
+    /**
+     * 实时修改单个引擎选项并立即生效，同时同步内部状态，
+     * 避免之后的分析流程用旧值覆盖新参数。
+     */
+    public void setOption(String name, String value) {
+        if (name == null || value == null) {
+            return;
+        }
+        if ("uci".equals(this.protocol)) {
+            cmd("setoption name " + name + " value " + value);
+        } else if ("ucci".equals(this.protocol)) {
+            cmd("setoption " + name + " " + value);
+        }
+
+        if ("Threads".equalsIgnoreCase(name) || "Thread".equalsIgnoreCase(name)) {
+            try {
+                this.threadNum = Integer.parseInt(value.trim());
+                this.threadNumChange = false;
+            } catch (NumberFormatException ignored) {
+            }
+        } else if ("Hash".equalsIgnoreCase(name)) {
+            try {
+                this.hashSize = Integer.parseInt(value.trim());
+                this.hashSizeChange = false;
+            } catch (NumberFormatException ignored) {
+            }
+        } else if ("MultiPV".equalsIgnoreCase(name)) {
+            try {
+                this.multiPV = Integer.parseInt(value.trim());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+    }
+
     public void setEngineDelay(int start, int end) {
         this.engineDelayStart = start;
         this.engineDelayEnd = end;

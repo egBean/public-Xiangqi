@@ -298,7 +298,7 @@ public class App extends Application {
     }
 
     /**
-     * 添加引擎
+     * 添加引擎（也用作引擎栏扳手按钮的“引擎参数”快捷入口）
      */
     public static void openEngineAdd() {
         engineAdd = createStage("/fxml/engineAdd.fxml");
@@ -308,6 +308,7 @@ public class App extends Application {
 
         engineAdd.showAndWait();
     }
+
     public static void closeEngineAdd() {
         engineAdd.close();
     }

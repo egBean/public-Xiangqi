@@ -96,6 +96,10 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     @FXML
     private ComboBox<String> threadComboBox;
 
+    /** 引擎栏 hash 后面的扳手按钮：快捷修改引擎参数 */
+    @FXML
+    private Button engineParamButton;
+
     @FXML
     private RadioMenuItem menuOfLargeBoard;
     @FXML
@@ -1101,6 +1105,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         linkButton.setTooltip(new Tooltip("连线"));
         deductionButton.setTooltip(new Tooltip("推演"));
         bookSwitchButton.setTooltip(new Tooltip("启用库招"));
+        engineParamButton.setTooltip(new Tooltip("引擎参数"));
 
     }
 
@@ -1426,22 +1431,146 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     }
 
     private void loadEngine(String name) {
-        try {
-            if (StringUtils.isNotEmpty(name)) {
-                for (EngineConfig ec : prop.getEngineConfigList()) {
-                    if (name.equals(ec.getName())) {
-                        if (engine != null) {
-                            engine.close();
-                        }
-                        engine = new Engine(ec, this);
-                        board.showMultiPV(engine.getMultiPV() > 1);
-                        return;
-                    }
+        if (StringUtils.isNotEmpty(name)) {
+            for (EngineConfig ec : prop.getEngineConfigList()) {
+                if (name.equals(ec.getName())) {
+                    loadEngine(ec);
+                    return;
                 }
             }
+        }
+    }
+
+    private void loadEngine(EngineConfig ec) {
+        if (ec == null) {
+            return;
+        }
+        try {
+            if (engine != null) {
+                engine.close();
+            }
+            engine = new Engine(ec, this);
+            board.showMultiPV(engine.getMultiPV() > 1);
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * 当前正在使用的引擎配置。
+     */
+    private EngineConfig currentEngineConfig() {
+        String name = prop.getEngineName();
+        if (StringUtils.isNotEmpty(name)) {
+            for (EngineConfig ec : prop.getEngineConfigList()) {
+                if (name.equals(ec.getName())) {
+                    return ec;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 引擎栏 hash 后面的扳手按钮：纯快捷入口，以当前引擎的配置打开原“添加引擎”弹窗，
+     * 确定后立即对运行中的引擎生效；改动了引擎程序或协议时重新加载引擎进程。
+     */
+    @FXML
+    public void engineParamButtonClick(ActionEvent event) {
+        EngineConfig ec = currentEngineConfig();
+        if (ec == null) {
+            DialogUtils.showWarningDialog("提示", "请先添加引擎");
+            return;
+        }
+
+        String oldName = ec.getName();
+        String oldPath = ec.getPath();
+        String oldProtocol = ec.getProtocol();
+        LinkedHashMap<String, String> oldOptions = copyEngineOptions(ec.getOptions());
+
+        // 直接复用原“添加引擎”弹窗（快捷入口，以当前引擎的配置进行编辑）
+        EngineAddController.ec = ec;
+        try {
+            App.openEngineAdd();
+        } finally {
+            EngineAddController.ec = null;
+        }
+
+        LinkedHashMap<String, String> newOptions = copyEngineOptions(ec.getOptions());
+        boolean optionsChanged = !oldOptions.equals(newOptions);
+        boolean engineFileChanged = !oldPath.equals(ec.getPath()) || !oldProtocol.equals(ec.getProtocol());
+        if (!oldName.equals(ec.getName())) {
+            // 名称变化时同步到引擎下拉框与配置
+            prop.setEngineName(ec.getName());
+            refreshEngineComboBox();
+            prop.save();
+        }
+        if (!optionsChanged && !engineFileChanged) {
+            // 未修改参数
+            return;
+        }
+
+        // 引擎栏的线程数/哈希与引擎参数保持一致，避免之后的分析用旧值覆盖
+        syncEngineViewOptions(newOptions);
+        prop.save();
+
+        engineStop();
+        if (engineFileChanged) {
+            // 引擎程序或协议发生变化，重新加载引擎进程
+            loadEngine(ec);
+        } else if (engine != null) {
+            // 直接向运行中的引擎下发新参数，实时生效
+            engine.setOptions(newOptions);
+            board.showMultiPV(engine.getMultiPV() > 1);
+        }
+
+        // 恢复引擎的工作状态，让新参数立即参与分析
+        if (engine != null && (robotRed.getValue() && redGo || robotBlack.getValue() && !redGo
+                || robotAnalysis.getValue())) {
+            engineGo();
+        }
+    }
+
+    private LinkedHashMap<String, String> copyEngineOptions(Map<String, String> options) {
+        return options == null ? new LinkedHashMap<>() : new LinkedHashMap<>(options);
+    }
+
+    /**
+     * 把引擎参数里的 Threads / Hash 同步到引擎栏与配置（值不合法时忽略）。
+     */
+    private void syncEngineViewOptions(Map<String, String> options) {
+        String threads = optionValue(options, "Threads", "Thread");
+        if (threads != null) {
+            try {
+                int num = Integer.parseInt(threads.trim());
+                prop.setThreadNum(num);
+                threadComboBox.setValue(String.valueOf(num));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        String hash = optionValue(options, "Hash");
+        if (hash != null) {
+            try {
+                int size = Integer.parseInt(hash.trim());
+                prop.setHashSize(size);
+                hashComboBox.setValue(String.valueOf(size));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+    }
+
+    private String optionValue(Map<String, String> options, String... keys) {
+        if (options == null || keys == null) {
+            return null;
+        }
+        for (Map.Entry<String, String> entry : options.entrySet()) {
+            for (String key : keys) {
+                if (key.equalsIgnoreCase(entry.getKey())) {
+                    return entry.getValue();
+                }
+            }
+        }
+        return null;
     }
 
     /**
