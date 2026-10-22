@@ -14,6 +14,8 @@ import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -35,6 +37,12 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
      * 连续识别失败多少次后重新寻找棋盘坐标（只重算裁剪区域，不重新初始化棋盘）
      */
     private static final int RECALIBRATE_FAILS = 10;
+
+    /**
+     * 日志时间格式：时分秒
+     */
+    private static final DateTimeFormatter LOG_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
+
     /**
      * 识别棋盘 暂存
      */
@@ -596,7 +604,8 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         boolean f = XiangqiUtils.validateChessBoard(board);
         if (!f) {
             // 识别出的局面不合法：把 board 对应的 FEN 打到 app.log（System.err 由 Main 双写到 log/app.log），便于排查识别问题
-            System.err.println("[linker] 识别局面不合法，FEN：" + ChessBoard.fenCode(board, null));
+            System.err.println("[linker] " + LOG_TIME_FORMATTER.format(LocalTime.now())
+                    + " 识别局面不合法，FEN：" + ChessBoard.fenCode(board, null));
         }
         return f;
     }
