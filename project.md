@@ -142,7 +142,7 @@ com.sojourners.chess
 | --- | --- |
 | `OnnxModel.java` | ONNX 模型加载与推理基础 |
 | `ChessRecognitionModel.java` | 棋盘棋子识别流程 |
-| `Yolo5Model.java` | YOLOv5 推理实现 |
+| `Yolo5Model.java` | YOLOv5 推理实现（`findChessBoard` 把检测框映射到 10×9 格子；`nms()` 是**按类别分别**抑制的，不同类之间不互相抑制，所以同一格可能出现多个候选框 —— 写入时用 `float[10][9] best` 记录该格已有最高置信度，**按置信度择优**，避免低分误检覆盖高分正确结果（之前是无条件 `board[i][j] = label`，结果取决于遍历顺序，`labels` 下标大的类总胜，例如红马 N(8) 覆盖红车 R(7)）） |
 | `Yolo11Model.java` | YOLOv11 推理实现 |
 
 ### 3.9 review/ — 棋谱复盘

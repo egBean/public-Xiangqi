@@ -114,6 +114,10 @@ public class Yolo5Model extends OnnxModel {
                 return false;
             }
             int pieceWidth = boardPos.width / 8, pieceHeight = boardPos.height / 9;
+            // 同一格可能有多个检测框（nms 按类别分别做抑制，不同类之间不会互相抑制），
+            // 这里按置信度择优：只有比该格已有的更可信才写入，避免低分误检覆盖高分正确结果
+            // （否则结果取决于 results 的遍历顺序，labels 下标大的类永远赢，如马覆盖车）
+            float[][] best = new float[10][9];
             // 再获取每个棋子及其位置
             for (DetectResult obj : results) {
                 char label = obj.label;
@@ -124,7 +128,10 @@ public class Yolo5Model extends OnnxModel {
                     if (i < 0 || i > 9 || j < 0 || j > 8) {
                         continue;
                     }
-                    board[i][j] = label;
+                    if (obj.confidence > best[i][j]) {
+                        best[i][j] = obj.confidence;
+                        board[i][j] = label;
+                    }
                 }
             }
             return true;
