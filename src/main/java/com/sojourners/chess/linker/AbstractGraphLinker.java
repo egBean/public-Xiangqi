@@ -39,6 +39,16 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     private static final int RECALIBRATE_FAILS = 10;
 
     /**
+     * 重新寻找棋盘坐标的最大尝试次数
+     */
+    private static final int RECALIBRATE_TIMES = 3;
+
+    /**
+     * 每次重试找棋盘坐标前的等待时间（毫秒），避免连续抓到同一帧异常画面
+     */
+    private static final long RECALIBRATE_RETRY_SLEEP = 500;
+
+    /**
      * 日志时间格式：时分秒
      */
     private static final DateTimeFormatter LOG_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -148,8 +158,23 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                         // 连续识别棋盘内容失败：先重新寻找棋盘坐标（只重算裁剪区域，不调 initChessBoard，棋谱与引擎局面保留）
                         if (++failCount >= RECALIBRATE_FAILS) {
                             failCount = 0;
-                            if (!findBoardPosition()) {
-                                // 连棋盘都找不到了：回外层按原流程重新找棋盘并初始化棋盘
+                            boolean found = false;
+                            for (int i = 0; i < RECALIBRATE_TIMES; i++) {
+                                if (i > 0) {
+                                    sleep(RECALIBRATE_RETRY_SLEEP);
+                                    if (Thread.currentThread().isInterrupted()) {
+                                        return;
+                                    }
+                                }
+                                if (findBoardPosition()) {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found) {
+                                // 重找棋盘坐标也失败：回外层按原流程重新找棋盘并初始化棋盘
+                                logRecognitionError("连续 " + RECALIBRATE_FAILS + " 次识别棋盘内容失败后，"
+                                        + "重新寻找棋盘坐标连续 " + RECALIBRATE_TIMES + " 次也失败，回外层重新找棋盘并初始化棋盘");
                                 break;
                             }
                         }
@@ -228,6 +253,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                             count++;
                             if (count > 9) {
                                 // 连续多次可能识别到新棋局，保存棋盘截图便于排查
+                                logRecognitionError("连续 " + count + " 帧识别到无法解释的局面差异（flag=4），回外层重新找棋盘并初始化棋盘");
                                 saveErrorBoardImage();
                                 break;
                             }
@@ -560,6 +586,13 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         BufferedImage img = screenshot(true);
         this.boardPos = this.aiModel.findBoardPosition(img);
         return this.boardPos != null;
+    }
+
+    /**
+     * 输出带时间的识别错误日志（System.err 由 Main 双写到 log/app.log）
+     */
+    private static void logRecognitionError(String message) {
+        System.err.println("[linker] " + LOG_TIME_FORMATTER.format(LocalTime.now()) + " 错误：" + message);
     }
 
     /**
