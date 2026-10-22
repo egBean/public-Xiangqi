@@ -29,6 +29,9 @@ public class ThinkData {
 
     private Boolean isValid;
 
+    /** 是否为多 PV 输出分组之间的分隔行（非实际分析结果） */
+    private boolean separator;
+
     public ThinkData() {
 
     }
@@ -141,5 +144,13 @@ public class ThinkData {
 
     public void setPv(Integer pv) {
         this.pv = pv;
+    }
+
+    public boolean isSeparator() {
+        return separator;
+    }
+
+    public void setSeparator(boolean separator) {
+        this.separator = separator;
     }
 }

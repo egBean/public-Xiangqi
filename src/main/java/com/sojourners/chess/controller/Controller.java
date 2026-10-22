@@ -27,6 +27,8 @@ import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.chart.LineChart;
@@ -45,8 +47,11 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Line;
 import javafx.stage.FileChooser;
 import javafx.util.Callback;
 
@@ -567,7 +572,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             }
             if (!listView.getItems().isEmpty()) {
                 for (ThinkData td : listView.getItems()) {
-                    if (td.getPv() == 1) {
+                    if (!td.isSeparator() && td.getPv() != null && td.getPv() == 1
+                            && td.getDetail() != null && !td.getDetail().isEmpty()) {
                         tacticList.remove(td.getDetail().get(0));
                         break;
                     }
@@ -908,6 +914,75 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
         charPane.setCenter(lineChart);
     }
+
+    /** 引擎输出（多 PV）分组：当前最新一组在列表中的结束位置（不包含） */
+    private int engineOutputGroupEnd = 0;
+
+    /**
+     * 当前是否多 PV 分析（MultiPV &gt; 1），此时引擎栏输出需要分组显示。
+     */
+    private boolean isMultiPvOutput() {
+        return engine != null && engine.getMultiPV() > 1;
+    }
+
+    /**
+     * 多 PV 时给每条分析结果加一个醒目的 PV 序号标签。
+     */
+    private Label createPvIndexLabel(Integer pv) {
+        int index = pv == null ? 1 : pv;
+        Label label = new Label("PV" + index);
+        label.setMinWidth(Region.USE_PREF_SIZE);
+        // PV1 为主变，用金杏色，其余用灰蓝色
+        label.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: white;"
+                + " -fx-background-radius: 4; -fx-padding: 1 5 2 5; -fx-background-color: "
+                + (index <= 1 ? "#c47b0c" : "#5f6f7f") + ";");
+        return label;
+    }
+
+    /**
+     * 多 PV 时两次输出之间的虚线分隔线。
+     */
+    private Line createEngineOutputDivider() {
+        Line line = new Line(0, 0, 100, 0);
+        line.setStroke(javafx.scene.paint.Color.web("#8a8a8a"));
+        line.setStrokeWidth(1);
+        line.getStrokeDashArray().addAll(4.0, 4.0);
+        return line;
+    }
+
+    /**
+     * 多 PV 时 PV 序号单独用标签显示，标题里的“PV: n”去掉避免重复。
+     */
+    private String stripPvFromTitle(String title) {
+        return title == null ? "" : title.replaceFirst("PV: \\d+\\s*", "");
+    }
+
+    /**
+     * 生成一行引擎输出：多 PV 时在标题最前面显示醒目的 PV 序号。
+     */
+    private VBox createEngineOutputRow(ThinkData item) {
+        VBox box = new VBox();
+        boolean multiPv = isMultiPvOutput();
+
+        Label title = new Label();
+        title.setText(multiPv ? stripPvFromTitle(item.getTitle()) : item.getTitle());
+        setScoreStyle(title, item.getScore());
+        if (multiPv) {
+            HBox titleBox = new HBox(6, createPvIndexLabel(item.getPv()), title);
+            titleBox.setAlignment(Pos.CENTER_LEFT);
+            box.getChildren().add(titleBox);
+        } else {
+            box.getChildren().add(title);
+        }
+
+        Label body = new Label();
+        body.setText(item.getBody());
+        body.setWrapText(true);
+        body.setMaxWidth(listView.getWidth() / 1.124);//bind(listView.widthProperty().divide(1.124));
+        box.getChildren().add(body);
+        return box;
+    }
+
     public void initialize() {
         // 读取配置
         prop = Properties.getInstance();
@@ -919,22 +994,21 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
                     @Override
                     protected void updateItem(ThinkData item, boolean bln) {
                         super.updateItem(item, bln);
-                        if (!bln) {
-                            VBox box = new VBox();
-
-                            Label title = new Label();
-                            title.setText(item.getTitle());
-                            setScoreStyle(title, item.getScore());
-                            box.getChildren().add(title);
-
-                            Label body = new Label();
-                            body.setText(item.getBody());
-                            body.setWrapText(true);
-                            body.setMaxWidth(listView.getWidth() / 1.124);//bind(listView.widthProperty().divide(1.124));
-                            box.getChildren().add(body);
-
-                            setGraphic(box);
+                        setText(null);
+                        if (bln || item == null) {
+                            setGraphic(null);
+                            return;
                         }
+                        if (item.isSeparator()) {
+                            // 多 PV 时两次输出之间的虚线分隔行
+                            Line divider = createEngineOutputDivider();
+                            divider.setEndX(Math.max(40, listView.getWidth() - 30));
+                            VBox sepBox = new VBox(divider);
+                            sepBox.setPadding(new Insets(5, 0, 5, 0));
+                            setGraphic(sepBox);
+                            return;
+                        }
+                        setGraphic(createEngineOutputRow(item));
                     }
                 };
                 return cell;
@@ -1257,6 +1331,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         refreshLineChart();
         // 重置引擎思考输出
         listView.getItems().clear();
+        engineOutputGroupEnd = 0;
         // 清空思考状态信息
         this.infoShowLabel.setText("");
 
@@ -1616,10 +1691,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             td.generate(redGo, isReverse.getValue(), board);
             if (td.getValid()) {
                 Platform.runLater(() -> {
-                    listView.getItems().addFirst(td);
-                    if (listView.getItems().size() > 128) {
-                        listView.getItems().removeLast();
-                    }
+                    addEngineOutput(td);
 
                     if (prop.isLinkShowInfo()) {
                         infoShowLabel.setText(td.getTitle() + " | " + td.getBody());
@@ -1636,6 +1708,43 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
                     }
                 });
             }
+        }
+    }
+
+    /**
+     * 把一条引擎输出加入引擎栏列表。
+     * 多 PV 时按“一组”显示：每组以 PV1 开头、组内 PV 序号自上而下递增，
+     * 组与组之间（即每一次完整输出之间）用一条虚线分隔。
+     */
+    private void addEngineOutput(ThinkData td) {
+        List<ThinkData> items = listView.getItems();
+        if (isMultiPvOutput()) {
+            int pv = td.getPv() == null ? 1 : td.getPv();
+            if (pv <= 1) {
+                // 新的一组：虚线放在新一组下方、上一组上方
+                if (!items.isEmpty()) {
+                    ThinkData separator = new ThinkData();
+                    separator.setSeparator(true);
+                    items.add(0, separator);
+                }
+                items.add(0, td);
+                engineOutputGroupEnd = 1;
+            } else {
+                // 同一组内继续追加，保持 PV 序号自上而下递增
+                int index = Math.min(engineOutputGroupEnd, items.size());
+                items.add(index, td);
+                engineOutputGroupEnd = index + 1;
+            }
+        } else {
+            items.add(0, td);
+            engineOutputGroupEnd = 0;
+        }
+
+        while (items.size() > 128) {
+            items.removeLast();
+        }
+        if (engineOutputGroupEnd > items.size()) {
+            engineOutputGroupEnd = items.size();
         }
     }
 
