@@ -30,6 +30,11 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
      * 棋盘区域
      */
     private Rectangle boardPos;
+
+    /**
+     * 连续识别失败多少次后重新寻找棋盘坐标（只重算裁剪区域，不重新初始化棋盘）
+     */
+    private static final int RECALIBRATE_FAILS = 10;
     /**
      * 识别棋盘 暂存
      */
@@ -122,6 +127,8 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 continue;
             }
             int count = 0;
+            // 连续识别失败次数
+            int failCount = 0;
             while (!Thread.currentThread().isInterrupted()) {
                 sleep(prop.getLinkScanTime());
                 if (Thread.currentThread().isInterrupted()) {
@@ -130,8 +137,17 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 if (!callBack.isThinking() && !pause) {
 
                     if (!findChessBoard(board2)) {
+                        // 连续识别棋盘内容失败：先重新寻找棋盘坐标（只重算裁剪区域，不调 initChessBoard，棋谱与引擎局面保留）
+                        if (++failCount >= RECALIBRATE_FAILS) {
+                            failCount = 0;
+                            if (!findBoardPosition()) {
+                                // 连棋盘都找不到了：回外层按原流程重新找棋盘并初始化棋盘
+                                break;
+                            }
+                        }
                         continue;
                     }
+                    failCount = 0;
 
                     boolean isReverse;
                     try {
