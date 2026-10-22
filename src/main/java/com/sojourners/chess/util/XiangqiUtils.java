@@ -659,6 +659,17 @@ public class XiangqiUtils {
                 if ((board[i][j] == 'a' || board[i][j] == 'A') && ((i > 2 && i < 7) || j < 3 || j > 5 || (i <= 2 && (i + j) % 2 == 0) || (i >= 7 && (i + j) % 2 == 1))) {
                     return false;
                 }
+                // 兵/卒在自家一方时只可能出现在两个位置：原位（黑卒第 3 行、红兵第 6 行）或向前一步（黑卒第 4 行、红兵第 5 行），
+                // 即列必须是初始列（偶数列），行只能是起始行或紧邻过河线的那一行
+                if (board[i][j] == 'p') {
+                    if (i <= 4 && ((i != 3 && i != 4) || j % 2 != 0)) {
+                        return false;
+                    }
+                } else if (board[i][j] == 'P') {
+                    if (i >= 5 && ((i != 5 && i != 6) || j % 2 != 0)) {
+                        return false;
+                    }
+                }
                 if (board[i][j] != ' ') {
                     if (map.containsKey(board[i][j])) {
                         map.put(board[i][j], map.get(board[i][j]) + 1);
