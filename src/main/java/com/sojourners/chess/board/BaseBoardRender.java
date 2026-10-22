@@ -8,6 +8,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.transform.Rotate;
 
@@ -166,6 +167,43 @@ public abstract class BaseBoardRender implements BoardRender {
         gc.setStroke(Color.web("#5a5a5a"));
         gc.setLineWidth(lineWidth);
         gc.strokeRect(x + lineWidth / 2, top + lineWidth / 2, w - lineWidth, h - lineWidth);
+        gc.restore();
+    }
+
+    /**
+     * 金手指模式：在走棋目标位置绘制白色闪烁光点，光点中心显示 PV 序号。
+     *
+     * @param pos       第一行/列的棋子中心坐标
+     * @param piece     棋子大小
+     * @param tips      光点列表（目标位置 + PV 序号）
+     * @param visible   当前是否处于“亮”的状态（闪烁用）
+     * @param isReverse 棋盘是否翻转
+     */
+    public void drawFingerTips(int pos, int piece, List<ChessBoard.FingerTip> tips, boolean visible, boolean isReverse) {
+        if (tips == null || tips.isEmpty()) {
+            return;
+        }
+        gc.save();
+        double r = piece * 0.26;
+        gc.setFont(Font.font(null, FontWeight.BOLD, piece * 0.32));
+        gc.setTextAlign(TextAlignment.CENTER);
+        gc.setTextBaseline(VPos.CENTER);
+        for (ChessBoard.FingerTip tip : tips) {
+            ChessBoard.Point target = tip.getTarget();
+            double x = pos + piece * getReverseX(target.getX(), isReverse);
+            double y = pos + piece * getReverseY(target.getY(), isReverse);
+            // 外圈光晕
+            gc.setGlobalAlpha(visible ? 0.20 : 0.05);
+            gc.setFill(Color.WHITE);
+            gc.fillOval(x - r * 1.6, y - r * 1.6, r * 3.2, r * 3.2);
+            // 光点（半透明，能看到底下的棋子）
+            gc.setGlobalAlpha(visible ? 0.55 : 0.15);
+            gc.fillOval(x - r, y - r, r * 2, r * 2);
+            // 中心 PV 序号
+            gc.setGlobalAlpha(visible ? 0.85 : 0.30);
+            gc.setFill(Color.web("#1b1f24"));
+            gc.fillText(String.valueOf(tip.getPv()), x, y);
+        }
         gc.restore();
     }
 

@@ -18,6 +18,8 @@ import com.sojourners.chess.review.GameReview;
 import com.sojourners.chess.review.ReviewItem;
 import com.sojourners.chess.review.ReviewSummary;
 import com.sojourners.chess.util.*;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -54,6 +56,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Line;
 import javafx.stage.FileChooser;
 import javafx.util.Callback;
+import javafx.util.Duration;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -165,8 +168,21 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     /** 金手指状态（选中后只分析当前选中棋子的可行着法） */
     private SimpleObjectProperty<Boolean> fingerMode = new SimpleObjectProperty<>(false);
 
-    /** 金手指模式下棋盘最多显示的箭头数（候选着法可能很多，避免棋盘太乱） */
+    /** 金手指模式下棋盘最多显示的提示光点数（候选着法可能很多，避免棋盘太乱） */
     private static final int FINGER_MAX_TIPS = 5;
+
+    /** 金手指光点闪烁时间线 */
+    private Timeline fingerTipTimeline;
+
+    /** 金手指光点当前的亮/暗状态 */
+    private boolean fingerTipBlinkOn = true;
+
+    /** 金手指当前是否正在分析 */
+    private boolean fingerAnalysisOn;
+
+    /** 金手指当前分析的棋子坐标（-1 表示未分析） */
+    private int fingerTipX = -1;
+    private int fingerTipY = -1;
     @FXML
     private Button blackButton;
     @FXML
@@ -560,8 +576,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
     /**
      * 金手指：与执红/执黑/分析同等的一个选中状态。
-     * 第一次点：取消分析/执红/执黑三个勾选，开启金手指并用 searchmoves 只分析选中棋子的所有可行着法；
-     * 再点：取消金手指选中并停止引擎（不自动恢复其它模式，由用户手动切换）。
+     * 开启后不会自动退出：只要棋盘上选中的是当前走棋方的棋子，就自动分析它的所有可行着法，
+     * 否则不分析（选中框保留）；再点一次可手动取消。
      */
     @FXML
     public void fingerButtonClick(ActionEvent event) {
@@ -569,25 +585,11 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             DialogUtils.showWarningDialog("提示", "引擎未加载");
             return;
         }
-        // 再次点击：取消金手指
+        // 再次点击：手动取消金手指
         if (fingerMode.getValue()) {
             fingerMode.setValue(false);
             engineStop();
-            return;
-        }
-        ChessBoard.Point selected = board.getSelectedPoint();
-        if (selected == null) {
-            DialogUtils.showWarningDialog("提示", "请先在棋盘上选中要分析的棋子");
-            return;
-        }
-        char piece = board.getBoard()[selected.getY()][selected.getX()];
-        if (piece == ' ' || XiangqiUtils.isRed(piece) != redGo) {
-            DialogUtils.showWarningDialog("提示", "请选中当前走棋方的棋子");
-            return;
-        }
-        List<String> fingerMoves = board.getTacticList(selected.getX(), selected.getY(), redGo);
-        if (fingerMoves.isEmpty()) {
-            DialogUtils.showWarningDialog("提示", "选中的棋子没有可行着法");
+            board.clearFingerTips();
             return;
         }
 
@@ -602,17 +604,12 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         blackButton.setDisable(false);
         analysisButton.setDisable(false);
         immediateButton.setDisable(false);
+        engineStop();
+        board.clearTips();
 
-        // 开启金手指（按钮高亮），只搜选中棋子的着法，并让 MultiPV 覆盖全部候选着法
+        // 开启金手指（按钮高亮），是否分析由当前选中的棋子决定
         fingerMode.setValue(true);
-        this.tacticList = null;
-        this.isThinking = false;
-        engine.setThreadNum(prop.getThreadNum());
-        engine.setHashSize(prop.getHashSize());
-        engine.setAnalysisModel(Engine.AnalysisModel.INFINITE, prop.getAnalysisValue());
-        engine.analysis(chessManualHandle.getFenCode(), chessManualHandle.getMoveList(),
-                fingerMoves, fingerMoves.size());
-        board.showMultiPV(engine.getMultiPV() > 1);
+        refreshFingerAnalysis();
     }
 
     /**
@@ -623,6 +620,98 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             robotAnalysis.setValue(false);
             fingerMode.setValue(false);
             engineStop();
+        }
+    }
+
+    /**
+     * 金手指模式下自动分析：棋盘上选中的是当前走棋方的棋子时，分析它的所有可行着法；
+     * 否则停止分析（选中框保留，金手指状态本身不退出）。
+     */
+    private void refreshFingerAnalysis() {
+        if (!fingerMode.getValue() || engine == null) {
+            return;
+        }
+        ChessBoard.Point selected = board.getSelectedPoint();
+        if (selected == null) {
+            stopFingerAnalysis();
+            return;
+        }
+        char piece = board.getBoard()[selected.getY()][selected.getX()];
+        if (piece == ' ' || XiangqiUtils.isRed(piece) != redGo) {
+            stopFingerAnalysis();
+            return;
+        }
+        // 同一个棋子已经在分析，不重复下发
+        if (fingerAnalysisOn && selected.getX() == fingerTipX && selected.getY() == fingerTipY) {
+            return;
+        }
+        List<String> moves = board.getTacticList(selected.getX(), selected.getY(), redGo);
+        if (moves.isEmpty()) {
+            stopFingerAnalysis();
+            return;
+        }
+        fingerTipX = selected.getX();
+        fingerTipY = selected.getY();
+        fingerAnalysisOn = true;
+        startFingerAnalysis(moves);
+    }
+
+    /**
+     * 开始分析金手指选中棋子的所有可行着法（无限分析 + searchmoves）。
+     */
+    private void startFingerAnalysis(List<String> moves) {
+        this.tacticList = null;
+        this.isThinking = false;
+        engine.setThreadNum(prop.getThreadNum());
+        engine.setHashSize(prop.getHashSize());
+        engine.setAnalysisModel(Engine.AnalysisModel.INFINITE, prop.getAnalysisValue());
+        engine.analysis(chessManualHandle.getFenCode(), chessManualHandle.getMoveList(), moves, moves.size());
+        board.showMultiPV(engine.getMultiPV() > 1);
+    }
+
+    /**
+     * 停止金手指分析并清除棋盘光点（金手指状态本身保留）。
+     */
+    private void stopFingerAnalysis() {
+        fingerTipX = -1;
+        fingerTipY = -1;
+        if (fingerAnalysisOn) {
+            fingerAnalysisOn = false;
+            engineStop();
+        }
+        board.clearFingerTips();
+    }
+
+    /**
+     * 开始金手指光点闪烁（每 450ms 切换亮/暗）。
+     */
+    private void startFingerTipBlink() {
+        if (fingerTipTimeline == null) {
+            fingerTipTimeline = new Timeline(new KeyFrame(Duration.millis(450), e -> {
+                fingerTipBlinkOn = !fingerTipBlinkOn;
+                if (board != null) {
+                    board.setFingerTipVisible(fingerTipBlinkOn);
+                }
+            }));
+            fingerTipTimeline.setCycleCount(Timeline.INDEFINITE);
+        }
+        fingerTipBlinkOn = true;
+        if (board != null) {
+            board.setFingerTipVisible(true);
+        }
+        fingerTipTimeline.playFromStart();
+    }
+
+    /**
+     * 停止金手指光点闪烁，并清除棋盘上的光点。
+     */
+    private void stopFingerTips() {
+        if (fingerTipTimeline != null) {
+            fingerTipTimeline.stop();
+        }
+        if (board != null) {
+            board.clearFingerTips();
+            board.setFingerTipVisible(true);
         }
     }
 
@@ -782,6 +871,9 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
                 goCallBack(move);
             }
 
+            // 金手指模式：选中棋子变化时自动开始/停止分析（选中框保留）
+            refreshFingerAnalysis();
+
             BoardContextMenu.getInstance().hide();
 
         } else if (event.getButton() == MouseButton.SECONDARY) {
@@ -791,11 +883,6 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
     }
     private void goCallBack(String move) {
-        // 走子后原来的选中棋子已不存在，退出金手指
-        if (fingerMode.getValue()) {
-            fingerMode.setValue(false);
-            engineStop();
-        }
         // 记录棋谱
         List<String> nextList = chessManualHandle.boardMove(move, board.translate(move, true));
         board.setManualList(nextList);
@@ -1406,7 +1493,6 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         robotBlack.setValue(false);
         blackButton.setDisable(false);
         robotAnalysis.setValue(false);
-        fingerMode.setValue(false);
         immediateButton.setDisable(false);
         isReverse.setValue(false);
         // 引擎停止计算
@@ -1436,6 +1522,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         System.gc();
         // 若推演窗口已打开，同步到新局面
         App.syncDeduction(board.getBoard(), redGo, isReverse.getValue());
+        // 新棋盘已无选中棋子，金手指自动停止分析（模式保留）
+        refreshFingerAnalysis();
     }
 
     private void initEngineView() {
@@ -1477,6 +1565,17 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         addListener(blackButton, robotBlack);
         addListener(analysisButton, robotAnalysis);
         addListener(fingerButton, fingerMode);
+        // 金手指光点：开启时开始闪烁，关闭时停止并清除光点
+        fingerMode.addListener((ChangeListener<Boolean>) (observableValue, oldValue, newValue) -> {
+            if (Boolean.TRUE.equals(newValue)) {
+                startFingerTipBlink();
+            } else {
+                stopFingerTips();
+                fingerAnalysisOn = false;
+                fingerTipX = -1;
+                fingerTipY = -1;
+            }
+        });
         addListener(reverseButton, isReverse);
         addListener(linkButton, linkMode);
         addListener(bookSwitchButton, useOpenBook);
@@ -1622,6 +1721,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             }
             engine = new Engine(ec, this);
             board.showMultiPV(engine.getMultiPV() > 1);
+            // 切换引擎后，金手指模式若处于选中状态则自动重新分析
+            refreshFingerAnalysis();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1686,6 +1787,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         prop.save();
 
         engineStop();
+        // 引擎参数/进程有变化，原来的金手指分析结果作废，需要重新下发
+        fingerAnalysisOn = false;
         if (engineFileChanged) {
             // 引擎程序或协议发生变化，重新加载引擎进程
             loadEngine(ec);
@@ -1699,6 +1802,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         if (engine != null && (robotRed.getValue() && redGo || robotBlack.getValue() && !redGo
                 || robotAnalysis.getValue())) {
             engineGo();
+        } else if (fingerMode.getValue()) {
+            refreshFingerAnalysis();
         }
     }
 
@@ -1784,7 +1889,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     @Override
     public void thinkDetail(ThinkData td) {
         if (redGo && robotRed.getValue() || !redGo && robotBlack.getValue() || robotAnalysis.getValue()
-                || fingerMode.getValue()) {
+                || fingerAnalysisOn) {
             td.generate(redGo, isReverse.getValue(), board);
             if (td.getValid()) {
                 Platform.runLater(() -> {
@@ -1796,11 +1901,13 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
                         timeShowLabel.setText(getTimeStrategyString());
                     }
 
-                    // 金手指模式候选着法可能很多，棋盘上只画胜率最高的前 5 个箭头（不画应着，避免太乱）
-                    if (!fingerMode.getValue()) {
+                    // 金手指模式用“目标位置白色光点 + PV 序号”代替箭头，最多显示前 5 个
+                    if (fingerMode.getValue()) {
+                        if (fingerAnalysisOn && td.getPv() != null && td.getPv() <= FINGER_MAX_TIPS) {
+                            board.setFingerTip(td.getDetail().get(0), td.getPv());
+                        }
+                    } else {
                         board.setTip(td.getDetail().get(0), td.getDetail().size() > 1 ? td.getDetail().get(1) : null, td.getPv());
-                    } else if (td.getPv() != null && td.getPv() <= FINGER_MAX_TIPS) {
-                        board.setTip(td.getDetail().get(0), null, td.getPv());
                     }
 
                     if (td.getPv() == 1) {
@@ -1962,6 +2069,9 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
      * 供切换到主菜单或其他模式时调用。
      */
     public void dispose() {
+        // 停止金手指光点闪烁，避免切到其它界面后时间线仍在运行
+        stopFingerTips();
+
         if (engine != null) {
             engine.close();
             engine = null;
@@ -2329,11 +2439,6 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     @Override
     public void browseChessRecord(String fenCode, List<String> moveList, boolean redGo, List<String> nextList) {
         checkLinkMode();
-        // 浏览到其它局面后，退出金手指
-        if (fingerMode.getValue()) {
-            fingerMode.setValue(false);
-            engineStop();
-        }
         // 棋盘
         board.browseChessRecord(fenCode, moveList);
         board.setManualList(nextList);
@@ -2363,6 +2468,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         }
         // 若推演窗口已打开，同步到浏览到的局面
         App.syncDeduction(board.getBoard(), redGo, isReverse.getValue());
+        // 金手指模式：局面变化后选中框通常已清空，这里同步开始/停止分析
+        refreshFingerAnalysis();
     }
 
     /**

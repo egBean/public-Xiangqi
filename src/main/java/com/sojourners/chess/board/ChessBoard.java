@@ -51,6 +51,12 @@ public class ChessBoard {
 
     private List<MoveTip> moveTips = new ArrayList<>();
 
+    /** 金手指光点提示（目标位置 + PV 序号） */
+    private final List<FingerTip> fingerTips = new ArrayList<>();
+
+    /** 金手指光点是否处于“亮”的状态（闪烁用） */
+    private boolean fingerTipVisible = true;
+
     private boolean isReverse;
 
     /**
@@ -135,6 +141,27 @@ public class ChessBoard {
 
         public void setSecond(Step second) {
             this.second = second;
+        }
+    }
+
+    /**
+     * 金手指提示：走棋目标位置 + PV 序号（用白色闪烁光点代替箭头）
+     */
+    public static class FingerTip {
+        private final Point target;
+        private final int pv;
+
+        public FingerTip(Point target, int pv) {
+            this.target = target;
+            this.pv = pv;
+        }
+
+        public Point getTarget() {
+            return target;
+        }
+
+        public int getPv() {
+            return pv;
         }
     }
 
@@ -348,6 +375,67 @@ public class ChessBoard {
         }
     }
 
+    /**
+     * 清除棋步提示箭头。
+     */
+    public void clearTips() {
+        if (moveTips.isEmpty()) {
+            return;
+        }
+        moveTips.clear();
+        if (stepTip) {
+            paint();
+        }
+    }
+
+    /**
+     * 金手指模式：在走棋目标位置显示带 PV 序号的闪烁光点（代替箭头）。
+     *
+     * @param move 引擎着法
+     * @param pv   PV 序号（1 开始）
+     */
+    public void setFingerTip(String move, int pv) {
+        Step step = stepForBoard(move);
+        if (step == null) {
+            return;
+        }
+        if (pv < fingerTips.size()) {
+            fingerTips.clear();
+        }
+        FingerTip tip = new FingerTip(step.getEnd(), pv);
+        if (pv > fingerTips.size()) {
+            fingerTips.add(tip);
+        } else {
+            fingerTips.set(pv - 1, tip);
+        }
+        // 金手指是用户显式触发的，不受“棋步提示”开关影响
+        paint();
+    }
+
+    /**
+     * 清除金手指光点。
+     */
+    public void clearFingerTips() {
+        if (fingerTips.isEmpty()) {
+            return;
+        }
+        fingerTips.clear();
+        paint();
+    }
+
+    /**
+     * 金手指光点闪烁（亮/暗切换后重绘）。
+     */
+    public void setFingerTipVisible(boolean visible) {
+        if (this.fingerTipVisible == visible) {
+            return;
+        }
+        this.fingerTipVisible = visible;
+        if (!fingerTips.isEmpty()) {
+            paint();
+        }
+    }
+
     public void setManualList(List<String> list) {
         manualList.clear();
         for (String move : list) {
@@ -497,6 +585,12 @@ public class ChessBoard {
             int piece = boardRender.getPieceSize(boardSize);
             int pos = padding + piece / 2;
             boardRender.drawWinRateBar(pos, piece, padding, bottomWinRate, isReverse);
+        }
+        // 金手指光点（闪烁）画在最上层（不受“棋步提示”开关影响）
+        if (!fingerTips.isEmpty()) {
+            int padding = boardRender.getPadding(boardSize);
+            int piece = boardRender.getPieceSize(boardSize);
+            boardRender.drawFingerTips(padding + piece / 2, piece, fingerTips, fingerTipVisible, isReverse);
         }
     }
 
