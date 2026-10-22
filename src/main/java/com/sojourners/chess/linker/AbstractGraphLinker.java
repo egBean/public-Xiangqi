@@ -593,22 +593,22 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
      * 识别异常时，把识别的棋盘截图保存到项目根目录 errorImg 下，便于后期调试
      */
     private void saveErrorBoardImage() {
-        BufferedImage img = this.lastBoardImg;
-        if (img == null) {
-            return;
-        }
-        try {
-            File dir = new File(System.getProperty("user.dir"), "errorImg");
-            if (!dir.exists() && !dir.mkdirs()) {
-                System.err.println("create errorImg dir failed: " + dir.getAbsolutePath());
-                return;
-            }
-            File file = new File(dir, "error_" + DateUtils.getDateTimeString(new Date()) + ".png");
-            ImageIO.write(img, "png", file);
-            System.out.println("save error board image: " + file.getAbsolutePath());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        BufferedImage img = this.lastBoardImg;
+//        if (img == null) {
+//            return;
+//        }
+//        try {
+//            File dir = new File(System.getProperty("user.dir"), "errorImg");
+//            if (!dir.exists() && !dir.mkdirs()) {
+//                System.err.println("create errorImg dir failed: " + dir.getAbsolutePath());
+//                return;
+//            }
+//            File file = new File(dir, "error_" + DateUtils.getDateTimeString(new Date()) + ".png");
+//            ImageIO.write(img, "png", file);
+//            System.out.println("save error board image: " + file.getAbsolutePath());
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
     }
 
     private boolean reverse(char[][] board) throws Exception {
