@@ -947,9 +947,21 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     @FXML
     public void pasteButtonClick(ActionEvent e) {
         String fenCode = ClipboardUtils.getText();
-        if (StringUtils.isNotEmpty(fenCode) && fenCode.split("/").length == 10) {
-            newFromOriginFen(fenCode);
+        if (StringUtils.isEmpty(fenCode) || StringUtils.isEmpty(fenCode.trim())) {
+            DialogUtils.showWarningDialog("提示", "剪贴板中没有局面 FEN");
+            return;
         }
+        fenCode = fenCode.trim();
+        if (fenCode.split("/").length != 10) {
+            DialogUtils.showWarningDialog("提示", "剪贴板中的内容不是有效的局面 FEN");
+            return;
+        }
+        // 与粘贴局面图片一致：局面不合法时给出提示弹窗，确认后再继续
+        if (!XiangqiUtils.validateChessBoard(XiangqiUtils.fenToBoard(fenCode))
+                && !DialogUtils.showConfirmDialog("提示", "检测到局面不合法，可能会导致引擎退出或者崩溃，是否继续？")) {
+            return;
+        }
+        newFromOriginFen(fenCode);
     }
 
     @FXML

@@ -165,7 +165,7 @@ com.sojourners.chess
 | `lock` | `SingleLock.java` `WorkerTask.java` | 单实例锁、后台任务 |
 | `media` | `SoundPlayer.java` | 走棋/吃子/将军等音效播放 |
 | `mouse` | `GlobalMouseListener.java` `MouseListenCallBack.java` | 全局鼠标监听（用于连线点击） |
-| `menu` | `BoardContextMenu.java` | 棋盘右键菜单 |
+| `menu` | `BoardContextMenu.java` | 棋盘右键菜单（“粘贴局面FEN”回调 `Controller#pasteButtonClick`：剪贴板为空/行数不足 10 行时 `DialogUtils.showWarningDialog` 提示，局面不合法时用 `XiangqiUtils#validateChessBoard` 校验并弹确认框（与粘贴局面图片一致），确认后才 `newFromOriginFen`） |
 | `jna` | `User32Extra.java` | Windows User32 API 扩展 |
 | `util` | `XiangqiUtils.java`（`#validateChessBoard` 校验 FEN/局面合法性：将/士/象位置、兵卒位置、各兵种数量。兵卒规则由 `#pawnPositionValid` 判断——先看兵/卒是否在自己一方（红兵看帅、黑卒看将所在的那半边），在对方一侧不限；在自己一方时只有两个位置可放：初始行、向前一步的那一行（都紧邻河界，红方第 6/5 行、黑方第 3/4 行），且列必须是初始列 0/2/4/6/8） `ZobristUtils.java` `ClipboardUtils.java` `DateUtils.java` `DialogUtils.java` `ExecutorsUtils.java` `HttpUtils.java` `MathUtils.java` `PathUtils.java` `ShellUtils.java` `StringUtils.java` `SystemUtils.java` | 棋子记谱/Zobrist 哈希、剪贴板、对话框、HTTP、路径、系统等工具 |
 
