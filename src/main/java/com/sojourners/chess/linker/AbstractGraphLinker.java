@@ -579,12 +579,8 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         }
         boolean f = XiangqiUtils.validateChessBoard(board);
         if (!f) {
-            for (int i = 0; i < 10; i++) {
-                for (int j = 0; j < 9; j++) {
-                    System.out.print(board[i][j]);
-                }
-                System.out.println();
-            }
+            // 识别出的局面不合法：把 board 对应的 FEN 打到 app.log（System.err 由 Main 双写到 log/app.log），便于排查识别问题
+            System.err.println("[linker] 识别局面不合法，FEN：" + ChessBoard.fenCode(board, null));
         }
         return f;
     }

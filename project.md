@@ -107,7 +107,7 @@ com.sojourners.chess
 | 文件 | 职责 |
 | --- | --- |
 | `GraphLinker.java` | 连线入口/接口 |
-| `AbstractGraphLinker.java` | 连线公共逻辑（截图识别、点击落子）。`compareBoard()` 返回 `Action`：1=对方走棋需同步引擎，2=引擎走棋需点击目标平台，3=新棋局需重新初始化，4=疑似识别错误（差异数>2但未达 3）。识别棋盘时截图存入 `lastBoardImg`；当 `action.flag == 4` 且连续 `count > 9` 时调用 `saveErrorBoardImage()`，把该截图以时间戳命名保存到项目根目录（`user.dir`）的 `errorImg/` 下，便于调试识别问题。`run()` 外层 `try/catch(Throwable)` 包住扫描主循环 `scanBoards()`，异常时 `onScanError()` 打印带时间的堆栈到 stderr（经 `Main` 双写进 `log/app.log`）、保存 `errorImg` 截图，并回调 `LinkerCallBack#linkerError()` 让界面关闭连线；`scan()` 每次启动重置 `pause`，保证用户重新点击连线即可恢复 |
+| `AbstractGraphLinker.java` | 连线公共逻辑（截图识别、点击落子）。`compareBoard()` 返回 `Action`：1=对方走棋需同步引擎，2=引擎走棋需点击目标平台，3=新棋局需重新初始化，4=疑似识别错误（差异数>2但未达 3）。识别棋盘时截图存入 `lastBoardImg`；当 `action.flag == 4` 且连续 `count > 9` 时调用 `saveErrorBoardImage()`，把该截图以时间戳命名保存到项目根目录（`user.dir`）的 `errorImg/` 下，便于调试识别问题。`run()` 外层 `try/catch(Throwable)` 包住扫描主循环 `scanBoards()`，异常时 `onScanError()` 打印带时间的堆栈到 stderr（经 `Main` 双写进 `log/app.log`）、保存 `errorImg` 截图，并回调 `LinkerCallBack#linkerError()` 让界面关闭连线；`scan()` 每次启动重置 `pause`，保证用户重新点击连线即可恢复。`findChessBoardWithModel()` 在 `XiangqiUtils#validateChessBoard` 判定识别结果不合法时（`f == false`），把该 board 对应的 FEN 用 `System.err.println("[linker] 识别局面不合法，FEN：" + ChessBoard.fenCode(board, null))` 打到 `log/app.log` |
 | `WindowsGraphLinker.java` | Windows 平台实现 |
 | `LinuxGraphLinker.java` | Linux 平台实现 |
 | `MacosGraphLinker.java` | macOS 平台实现 |
