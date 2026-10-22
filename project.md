@@ -99,7 +99,7 @@ com.sojourners.chess
 
 | 文件 | 职责 |
 | --- | --- |
-| `Engine.java` | 引擎进程管理与 UCI/UCCI 协议交互；`setOption/setOptions` 可在引擎运行中实时下发 `setoption` 并同步内部 `threadNum/hashSize/multiPV`，避免下一次 `analysis` 用旧值覆盖 |
+| `Engine.java` | 引擎进程管理与 UCI/UCCI 协议交互；`setOption/setOptions` 可在引擎运行中实时下发 `setoption` 并同步内部 `threadNum/hashSize/multiPV`，避免下一次 `analysis` 用旧值覆盖。`closed` 标志用于关闭流程：`close()` 先发 `quit` 再抦置 `closed`，读线程循环与 `cmd` 的异常打印均以 `!closed` 为条件，避免退出软件时打印 `java.io.IOException: Stream closed`（`Engine.test()` 同样用 `stopped` 标志静默关闭测试进程的读流） |
 | `EngineCallBack.java` | 引擎输出回调 |
 
 ### 3.5 linker/ — 自动连线

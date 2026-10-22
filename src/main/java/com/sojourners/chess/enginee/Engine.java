@@ -36,6 +36,11 @@ public class Engine {
      * 停止标志位
      */
     private volatile boolean stopFlag;
+
+    /**
+     * 引擎是否已关闭（关闭时读写流会报 Stream closed，属于正常现象）
+     */
+    private volatile boolean closed;
     private volatile long time;
 
     private BufferedReader reader;
@@ -85,7 +90,7 @@ public class Engine {
         thread = Thread.ofVirtual().start(() -> {
             try {
                 String line;
-                while ((line = reader.readLine()) != null) {
+                while (!closed && (line = reader.readLine()) != null) {
 //                    System.out.println(line);
                     if (line.contains("depth") || line.contains("nps")) {
                         thinkDetail(line);
@@ -94,7 +99,10 @@ public class Engine {
                     }
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                // 关闭引擎时读取流被关闭会抛 IOException（Stream closed），不需要打印
+                if (!closed) {
+                    e.printStackTrace();
+                }
             }
         });
 
@@ -141,6 +149,8 @@ public class Engine {
         Thread h = null;
         BufferedWriter bw = null;
         BufferedReader br = null;
+        // 测试结束时要关闭读流，避免读线程把 "Stream closed" 当作异常打印
+        AtomicBoolean stopped = new AtomicBoolean(false);
         try {
             p = Runtime.getRuntime().exec(filePath);
             bw = new BufferedWriter(new OutputStreamWriter(p.getOutputStream()));
@@ -151,7 +161,7 @@ public class Engine {
             (h = Thread.ofVirtual().unstarted(() -> {
                 try {
                     String line;
-                    while ((line = finalBr.readLine()) != null) {
+                    while (!stopped.get() && (line = finalBr.readLine()) != null) {
                         if ("uciok".equals(line) || "ucciok".equals(line) ) {
                             f.set(true);
                         }
@@ -165,7 +175,9 @@ public class Engine {
                         }
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    if (!stopped.get()) {
+                        e.printStackTrace();
+                    }
                 }
             })).start();
 
@@ -189,10 +201,11 @@ public class Engine {
             e.printStackTrace();
             return null;
         } finally {
+            stopped.set(true);
             if (p != null) {
                 p.destroy();
             }
-            if (h.isAlive()) {
+            if (h != null && h.isAlive()) {
                 h.interrupt();
             }
             try {
@@ -203,7 +216,7 @@ public class Engine {
                     br.close();
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                // 测试结束关闭流时的异常忽略
             }
         }
     }
@@ -400,7 +413,10 @@ public class Engine {
             writer.write(command + System.getProperty("line.separator"));
             writer.flush();
         } catch (Exception e) {
-            e.printStackTrace();
+            // 引擎已关闭（进程退出/流已关闭）时写入失败，不需要打印
+            if (!closed) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -479,10 +495,16 @@ public class Engine {
     }
 
     public void close() {
+        if (closed) {
+            return;
+        }
         try {
+            // 通知引擎退出（此时还未标记 closed，cmd 正常写入）
             if (process.isAlive()) {
                 cmd("quit");
             }
+            // 标记已关闭：之后读线程因流关闭而抛出的 IOException、以及残留写操作都不再打印
+            closed = true;
 
             if (thread.isAlive()) {
                 thread.interrupt();
@@ -493,13 +515,19 @@ public class Engine {
             }
 
             if (reader != null) {
-                reader.close();
+                try {
+                    reader.close();
+                } catch (Exception ignore) {
+                }
             }
             if (writer != null) {
-                writer.close();
+                try {
+                    writer.close();
+                } catch (Exception ignore) {
+                }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            // 关闭过程中的异常（进程已退出等）忽略
         }
     }
 }
