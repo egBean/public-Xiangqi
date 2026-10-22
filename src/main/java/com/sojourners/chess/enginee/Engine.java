@@ -50,6 +50,9 @@ public class Engine {
 
     private int multiPV;
 
+    /** 引擎配置里的 MultiPV（金手指等临时分析会临时调高，之后恢复到该值） */
+    private int configMultiPV = 1;
+
     /** 对弈模式专用延迟，-1 表示使用全局配置 */
     private int engineDelayStart = -1;
     private int engineDelayEnd = -1;
@@ -73,6 +76,7 @@ public class Engine {
         } else {
             multiPV = 1;
         }
+        configMultiPV = multiPV;
 
         process = Runtime.getRuntime().exec(ec.getPath(), null, PathUtils.getParentDir(ec.getPath()));
         reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -107,6 +111,21 @@ public class Engine {
 
     public int getMultiPV() {
         return multiPV;
+    }
+
+    /**
+     * 切换 MultiPV（需在引擎空闲时调用），值未变化时不下发命令。
+     */
+    private void applyMultiPv(int target) {
+        if (target < 1 || target == multiPV) {
+            return;
+        }
+        multiPV = target;
+        if ("uci".equals(this.protocol)) {
+            cmd("setoption name MultiPV value " + target);
+        } else if ("ucci".equals(this.protocol)) {
+            cmd("setoption MultiPV " + target);
+        }
     }
 
     private void sleep(long t) {
@@ -314,7 +333,19 @@ public class Engine {
     }
 
     public void analysis(String fenCode, List<String> moves, List<String> tacticList) {
+        analysis(fenCode, moves, tacticList, 0);
+    }
+
+    /**
+     * 指定 MultiPV 的分析（searchmoves），用于“金手指”等只需分析部分着法的场景。
+     *
+     * @param searchMultiPv 本次分析使用的 MultiPV，0 表示恢复到引擎配置的 MultiPV
+     */
+    public void analysis(String fenCode, List<String> moves, List<String> tacticList, int searchMultiPv) {
         stop();
+
+        // 金手指会临时提高 MultiPV，普通分析时恢复为引擎配置值
+        applyMultiPv(searchMultiPv > 0 ? searchMultiPv : configMultiPV);
 
         if (threadNumChange) {
             cmd(("uci".equals(this.protocol) ? "setoption name Threads value " : "setoption Threads ") + threadNum);
@@ -431,6 +462,7 @@ public class Engine {
         } else if ("MultiPV".equalsIgnoreCase(name)) {
             try {
                 this.multiPV = Integer.parseInt(value.trim());
+                this.configMultiPV = this.multiPV;
             } catch (NumberFormatException ignored) {
             }
         }

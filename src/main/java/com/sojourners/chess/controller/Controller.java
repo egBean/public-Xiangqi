@@ -160,6 +160,14 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     @FXML
     private Button analysisButton;
     @FXML
+    private Button fingerButton;
+
+    /** 金手指状态（选中后只分析当前选中棋子的可行着法） */
+    private SimpleObjectProperty<Boolean> fingerMode = new SimpleObjectProperty<>(false);
+
+    /** 金手指模式下棋盘最多显示的箭头数（候选着法可能很多，避免棋盘太乱） */
+    private static final int FINGER_MAX_TIPS = 5;
+    @FXML
     private Button blackButton;
     @FXML
     private Button redButton;
@@ -532,8 +540,10 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
         robotAnalysis.setValue(!robotAnalysis.getValue());
         if (robotAnalysis.getValue()) {
+            // 分析模式与执红 / 执黑 / 金手指互斥
             robotRed.setValue(false);
             robotBlack.setValue(false);
+            fingerMode.setValue(false);
             engineGo();
         } else {
             engineStop();
@@ -545,6 +555,74 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
         if (linkMode.getValue() && !robotAnalysis.getValue()) {
             stopGraphLink();
+        }
+    }
+
+    /**
+     * 金手指：与执红/执黑/分析同等的一个选中状态。
+     * 第一次点：取消分析/执红/执黑三个勾选，开启金手指并用 searchmoves 只分析选中棋子的所有可行着法；
+     * 再点：取消金手指选中并停止引擎（不自动恢复其它模式，由用户手动切换）。
+     */
+    @FXML
+    public void fingerButtonClick(ActionEvent event) {
+        if (engine == null) {
+            DialogUtils.showWarningDialog("提示", "引擎未加载");
+            return;
+        }
+        // 再次点击：取消金手指
+        if (fingerMode.getValue()) {
+            fingerMode.setValue(false);
+            engineStop();
+            return;
+        }
+        ChessBoard.Point selected = board.getSelectedPoint();
+        if (selected == null) {
+            DialogUtils.showWarningDialog("提示", "请先在棋盘上选中要分析的棋子");
+            return;
+        }
+        char piece = board.getBoard()[selected.getY()][selected.getX()];
+        if (piece == ' ' || XiangqiUtils.isRed(piece) != redGo) {
+            DialogUtils.showWarningDialog("提示", "请选中当前走棋方的棋子");
+            return;
+        }
+        List<String> fingerMoves = board.getTacticList(selected.getX(), selected.getY(), redGo);
+        if (fingerMoves.isEmpty()) {
+            DialogUtils.showWarningDialog("提示", "选中的棋子没有可行着法");
+            return;
+        }
+
+        // 金手指与控制引擎的三种模式互斥：取消引擎执红/执黑/分析
+        if (linkMode.getValue()) {
+            stopGraphLink();
+        }
+        robotRed.setValue(false);
+        robotBlack.setValue(false);
+        robotAnalysis.setValue(false);
+        redButton.setDisable(false);
+        blackButton.setDisable(false);
+        analysisButton.setDisable(false);
+        immediateButton.setDisable(false);
+
+        // 开启金手指（按钮高亮），只搜选中棋子的着法，并让 MultiPV 覆盖全部候选着法
+        fingerMode.setValue(true);
+        this.tacticList = null;
+        this.isThinking = false;
+        engine.setThreadNum(prop.getThreadNum());
+        engine.setHashSize(prop.getHashSize());
+        engine.setAnalysisModel(Engine.AnalysisModel.INFINITE, prop.getAnalysisValue());
+        engine.analysis(chessManualHandle.getFenCode(), chessManualHandle.getMoveList(),
+                fingerMoves, fingerMoves.size());
+        board.showMultiPV(engine.getMultiPV() > 1);
+    }
+
+    /**
+     * 结束分析模式 / 金手指（切到引擎执红、执黑时调用）。执红与执黑之间可以同时选中。
+     */
+    private void exitAnalysisModes() {
+        if (robotAnalysis.getValue() || fingerMode.getValue()) {
+            robotAnalysis.setValue(false);
+            fingerMode.setValue(false);
+            engineStop();
         }
     }
 
@@ -594,6 +672,10 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         }
 
         robotBlack.setValue(!robotBlack.getValue());
+        if (robotBlack.getValue()) {
+            // 执红/执黑可以同时选中，但都与分析模式、金手指互斥
+            exitAnalysisModes();
+        }
         if (robotBlack.getValue() && !redGo) {
             engineGo();
         }
@@ -617,6 +699,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             robotRed.setValue(false);
             robotBlack.setValue(false);
             robotAnalysis.setValue(false);
+            fingerMode.setValue(false);
             // 关闭引擎
             if (engine != null) {
                 engine.close();
@@ -633,6 +716,10 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         }
 
         robotRed.setValue(!robotRed.getValue());
+        if (robotRed.getValue()) {
+            // 执红/执黑可以同时选中，但都与分析模式、金手指互斥
+            exitAnalysisModes();
+        }
         if (robotRed.getValue() && redGo) {
             engineGo();
         }
@@ -658,6 +745,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
         analysisButton.setDisable(false);
         robotAnalysis.setValue(false);
+        fingerMode.setValue(false);
 
         linkMode.setValue(false);
     }
@@ -703,6 +791,11 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
     }
     private void goCallBack(String move) {
+        // 走子后原来的选中棋子已不存在，退出金手指
+        if (fingerMode.getValue()) {
+            fingerMode.setValue(false);
+            engineStop();
+        }
         // 记录棋谱
         List<String> nextList = chessManualHandle.boardMove(move, board.translate(move, true));
         board.setManualList(nextList);
@@ -1173,6 +1266,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         redButton.setTooltip(new Tooltip("引擎执红"));
         blackButton.setTooltip(new Tooltip("引擎执黑"));
         analysisButton.setTooltip(new Tooltip("分析模式"));
+        fingerButton.setTooltip(new Tooltip("金手指：分析选中棋子的所有着法"));
         immediateButton.setTooltip(new Tooltip("立即出招"));
         reviewButton.setTooltip(new Tooltip("复盘"));
         changeTacticButton.setTooltip(new Tooltip("变招"));
@@ -1312,6 +1406,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         robotBlack.setValue(false);
         blackButton.setDisable(false);
         robotAnalysis.setValue(false);
+        fingerMode.setValue(false);
         immediateButton.setDisable(false);
         isReverse.setValue(false);
         // 引擎停止计算
@@ -1381,6 +1476,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         addListener(redButton, robotRed);
         addListener(blackButton, robotBlack);
         addListener(analysisButton, robotAnalysis);
+        addListener(fingerButton, fingerMode);
         addListener(reverseButton, isReverse);
         addListener(linkButton, linkMode);
         addListener(bookSwitchButton, useOpenBook);
@@ -1687,7 +1783,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
     @Override
     public void thinkDetail(ThinkData td) {
-        if (redGo && robotRed.getValue() || !redGo && robotBlack.getValue() || robotAnalysis.getValue()) {
+        if (redGo && robotRed.getValue() || !redGo && robotBlack.getValue() || robotAnalysis.getValue()
+                || fingerMode.getValue()) {
             td.generate(redGo, isReverse.getValue(), board);
             if (td.getValid()) {
                 Platform.runLater(() -> {
@@ -1699,9 +1796,16 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
                         timeShowLabel.setText(getTimeStrategyString());
                     }
 
-                    board.setTip(td.getDetail().get(0), td.getDetail().size() > 1 ? td.getDetail().get(1) : null, td.getPv());
+                    // 金手指模式候选着法可能很多，棋盘上只画胜率最高的前 5 个箭头（不画应着，避免太乱）
+                    if (!fingerMode.getValue()) {
+                        board.setTip(td.getDetail().get(0), td.getDetail().size() > 1 ? td.getDetail().get(1) : null, td.getPv());
+                    } else if (td.getPv() != null && td.getPv() <= FINGER_MAX_TIPS) {
+                        board.setTip(td.getDetail().get(0), null, td.getPv());
+                    }
 
                     if (td.getPv() == 1) {
+                        // 金手指结束后 MultiPV 会恢复为配置值，这里同步棋盘的多路提示开关
+                        board.showMultiPV(engine != null && engine.getMultiPV() > 1);
                         chessManualHandle.setScore(td.getScore(), td.getMate());
                         // 实时更新棋盘左侧胜率条
                         board.setWinRate(scoreToWinRate(td.getScore(), td.getMate()));
@@ -1730,7 +1834,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
                 items.add(0, td);
                 engineOutputGroupEnd = 1;
             } else {
-                // 同一组内继续追加，保持 PV 序号自上而下递增
+                // 同一组内继续追加，最后统一按胜率倒序
                 int index = Math.min(engineOutputGroupEnd, items.size());
                 items.add(index, td);
                 engineOutputGroupEnd = index + 1;
@@ -1740,12 +1844,38 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
             engineOutputGroupEnd = 0;
         }
 
+        // 多 PV 时这一组按行棋方胜率倒序（金手指的所有着法也靠这里排序）
+        sortCurrentEngineOutputGroup();
+
         while (items.size() > 128) {
             items.removeLast();
         }
         if (engineOutputGroupEnd > items.size()) {
             engineOutputGroupEnd = items.size();
         }
+    }
+
+    /**
+     * 把最新一组引擎输出按行棋方胜率倒序排列（分值越高胜率越高）。
+     */
+    private void sortCurrentEngineOutputGroup() {
+        List<ThinkData> items = listView.getItems();
+        int end = Math.min(engineOutputGroupEnd, items.size());
+        if (end <= 1) {
+            return;
+        }
+        List<ThinkData> group = new ArrayList<>(items.subList(0, end));
+        group.sort((a, b) -> Integer.compare(engineOutputScoreKey(b), engineOutputScoreKey(a)));
+        for (int i = 0; i < end; i++) {
+            if (items.get(i) != group.get(i)) {
+                items.set(i, group.get(i));
+            }
+        }
+    }
+
+    private int engineOutputScoreKey(ThinkData td) {
+        Integer score = td.getSortScore();
+        return score == null ? Integer.MIN_VALUE : score;
     }
 
     private String getTimeStrategyString() {
@@ -2061,6 +2191,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         blackButton.setDisable(false);
         analysisButton.setDisable(false);
         immediateButton.setDisable(false);
+        fingerMode.setValue(false);
         engineStop();
         chessManualHandle.clearReview();
 
@@ -2198,6 +2329,11 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     @Override
     public void browseChessRecord(String fenCode, List<String> moveList, boolean redGo, List<String> nextList) {
         checkLinkMode();
+        // 浏览到其它局面后，退出金手指
+        if (fingerMode.getValue()) {
+            fingerMode.setValue(false);
+            engineStop();
+        }
         // 棋盘
         board.browseChessRecord(fenCode, moveList);
         board.setManualList(nextList);

@@ -29,6 +29,12 @@ public class ThinkData {
 
     private Boolean isValid;
 
+    /**
+     * 行棋方视角的原始分值（不随棋盘翻转），用于引擎输出的胜率倒序排序；
+     * 绝杀时换算为 ±(30000 - 步数)。
+     */
+    private Integer sortScore;
+
     /** 是否为多 PV 输出分组之间的分隔行（非实际分析结果） */
     private boolean separator;
 
@@ -50,6 +56,12 @@ public class ThinkData {
         } else {
             sb.append("分数: ");
             score = score;
+        }
+        // 记录行棋方视角的原始分值（不随棋盘翻转），用于按胜率排序输出
+        if (mate != null) {
+            sortScore = mate > 0 ? 30000 - mate : -30000 - mate;
+        } else {
+            sortScore = score == null ? 0 : score;
         }
         if (redGo && isReverse || !redGo && !isReverse) {
             score = -score;
@@ -152,5 +164,13 @@ public class ThinkData {
 
     public void setSeparator(boolean separator) {
         this.separator = separator;
+    }
+
+    public Integer getSortScore() {
+        return sortScore;
+    }
+
+    public void setSortScore(Integer sortScore) {
+        this.sortScore = sortScore;
     }
 }

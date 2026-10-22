@@ -209,6 +209,13 @@ public class ChessBoard {
         this.showMultiPV = showMultiPV;
     }
 
+    /**
+     * 当前在棋盘上选中的棋子坐标（x=列，y=行），未选中时返回 null。
+     */
+    public Point getSelectedPoint() {
+        return remark;
+    }
+
     private void setNewBoard(String fenCode) {
         if (StringUtils.isEmpty(fenCode)) {
             initChessBoard(board);
@@ -425,6 +432,47 @@ public class ChessBoard {
                             }
                         }
                     }
+                }
+            }
+        }
+        return list;
+    }
+
+    /**
+     * 获取指定棋子的所有可行着法（引擎坐标，已排除送将）。
+     * 该位置无棋子、或棋子不属于 redGo 一方时返回空列表。
+     *
+     * @param x     列
+     * @param y     行
+     * @param redGo 行棋方（true 为红方）
+     */
+    public List<String> getTacticList(int x, int y, boolean redGo) {
+        List<String> list = new ArrayList<>();
+        if (x < 0 || x > 8 || y < 0 || y > 9) {
+            return list;
+        }
+        char piece = board[y][x];
+        if (piece == ' ' || XiangqiUtils.isRed(piece) != redGo) {
+            return list;
+        }
+        // 用临时局面排除“送将”的着法，避免把非法着法交给引擎 searchmoves
+        char[][] tmp = new char[board.length][board[0].length];
+        for (int i = 0; i < board.length; i++) {
+            System.arraycopy(board[i], 0, tmp[i], 0, board[0].length);
+        }
+        for (int i = 0; i < board.length; i++) {
+            for (int j = 0; j < board[0].length; j++) {
+                if ((y == i && x == j) || !XiangqiUtils.canGo(board, y, x, i, j)) {
+                    continue;
+                }
+                char captured = tmp[i][j];
+                tmp[i][j] = tmp[y][x];
+                tmp[y][x] = ' ';
+                boolean jiang = XiangqiUtils.isJiang(tmp, redGo);
+                tmp[y][x] = tmp[i][j];
+                tmp[i][j] = captured;
+                if (!jiang) {
+                    list.add(stepForEngine(x, y, j, i));
                 }
             }
         }
