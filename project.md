@@ -167,7 +167,7 @@ com.sojourners.chess
 | `mouse` | `GlobalMouseListener.java` `MouseListenCallBack.java` | 全局鼠标监听（用于连线点击） |
 | `menu` | `BoardContextMenu.java` | 棋盘右键菜单 |
 | `jna` | `User32Extra.java` | Windows User32 API 扩展 |
-| `util` | `XiangqiUtils.java`（`#validateChessBoard` 校验 FEN/局面合法性：将/士/象位置、兵卒位置、各兵种数量。兵卒规则——在本方阵地（黑 `p` 第 0~4 行、红 `P` 第 5~9 行）时只可能出现两个位置：原位（黑第 3 行、红第 6 行）或向前一步（黑第 4 行、红第 5 行），因此行只允许起始行/紧邻过河线那一行，列必须是初始偶数列；过河后不限） `ZobristUtils.java` `ClipboardUtils.java` `DateUtils.java` `DialogUtils.java` `ExecutorsUtils.java` `HttpUtils.java` `MathUtils.java` `PathUtils.java` `ShellUtils.java` `StringUtils.java` `SystemUtils.java` | 棋子记谱/Zobrist 哈希、剪贴板、对话框、HTTP、路径、系统等工具 |
+| `util` | `XiangqiUtils.java`（`#validateChessBoard` 校验 FEN/局面合法性：将/士/象位置、兵卒位置、各兵种数量。兵卒规则由 `#pawnPositionValid` 判断——先看兵/卒是否在自己一方（红兵看帅、黑卒看将所在的那半边），在对方一侧不限；在自己一方时只有两个位置可放：初始行、向前一步的那一行（都紧邻河界，红方第 6/5 行、黑方第 3/4 行），且列必须是初始列 0/2/4/6/8） `ZobristUtils.java` `ClipboardUtils.java` `DateUtils.java` `DialogUtils.java` `ExecutorsUtils.java` `HttpUtils.java` `MathUtils.java` `PathUtils.java` `ShellUtils.java` `StringUtils.java` `SystemUtils.java` | 棋子记谱/Zobrist 哈希、剪贴板、对话框、HTTP、路径、系统等工具 |
 
 ## 4. 资源目录（src/main/resources）
 

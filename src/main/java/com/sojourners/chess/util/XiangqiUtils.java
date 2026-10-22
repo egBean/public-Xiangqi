@@ -644,6 +644,17 @@ public class XiangqiUtils {
     }
 
     public static boolean validateChessBoard(char[][] board) {
+        // 将/帅所在行：兵卒只在自己一方（将/帅所在的那半边）受位置限制
+        int redKingRow = 9, blackKingRow = 0;
+        for (int i = 0; i < 10; i++) {
+            for (int j = 3; j <= 5; j++) {
+                if (board[i][j] == 'K') {
+                    redKingRow = i;
+                } else if (board[i][j] == 'k') {
+                    blackKingRow = i;
+                }
+            }
+        }
         Map<Character, Integer> map = new HashMap<>(32);
         // 校验棋子位置是否合法
         for (int i = 0; i < 10; i++) {
@@ -659,16 +670,12 @@ public class XiangqiUtils {
                 if ((board[i][j] == 'a' || board[i][j] == 'A') && ((i > 2 && i < 7) || j < 3 || j > 5 || (i <= 2 && (i + j) % 2 == 0) || (i >= 7 && (i + j) % 2 == 1))) {
                     return false;
                 }
-                // 兵/卒在自家一方时只可能出现在两个位置：原位（黑卒第 3 行、红兵第 6 行）或向前一步（黑卒第 4 行、红兵第 5 行），
-                // 即列必须是初始列（偶数列），行只能是起始行或紧邻过河线的那一行
-                if (board[i][j] == 'p') {
-                    if (i <= 4 && ((i != 3 && i != 4) || j % 2 != 0)) {
-                        return false;
-                    }
-                } else if (board[i][j] == 'P') {
-                    if (i >= 5 && ((i != 5 && i != 6) || j % 2 != 0)) {
-                        return false;
-                    }
+                // 兵/卒：红兵看帅、黑卒看将，只在自己一方时受位置限制
+                if (board[i][j] == 'P' && !pawnPositionValid(i, j, redKingRow)) {
+                    return false;
+                }
+                if (board[i][j] == 'p' && !pawnPositionValid(i, j, blackKingRow)) {
+                    return false;
                 }
                 if (board[i][j] != ' ') {
                     if (map.containsKey(board[i][j])) {
@@ -698,6 +705,18 @@ public class XiangqiUtils {
             return false;
         }
         return true;
+    }
+
+    /**
+     * 兵/卒位置校验：只在自己一方（红兵看帅、黑卒看将所在的那半边）受限制，
+     * 本方只有两个位置能放兵——初始行、向前一步的那一行（都是紧邻河界的行），
+     * 且列必须是初始列 0/2/4/6/8；过河后不限。
+     */
+    private static boolean pawnPositionValid(int row, int col, int kingRow) {
+        if ((row >= 5) != (kingRow >= 5)) {
+            return true;
+        }
+        return (kingRow >= 5 ? (row == 5 || row == 6) : (row == 3 || row == 4)) && col % 2 == 0;
     }
 
     public static boolean isReverse(String fenCode) {
