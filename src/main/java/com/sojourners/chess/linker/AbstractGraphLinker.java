@@ -59,8 +59,8 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         this.callBack = callBack;
         robot = new Robot();
         this.prop = Properties.getInstance();
-        this.aiModel = "yolo11".equalsIgnoreCase(prop.getLinkAiModel()) ? new Yolo11Model() : new ChessRecognitionModel();
-        this.supportAiModel = !"yolo11".equalsIgnoreCase(prop.getLinkAiModel()) ? new Yolo11Model() : new ChessRecognitionModel();
+        this.aiModel = new Yolo11Model();
+//        this.supportAiModel = !"yolo11".equalsIgnoreCase(prop.getLinkAiModel()) ? new Yolo11Model() : new ChessRecognitionModel();
         this.pause = false;
     }
 
@@ -589,12 +589,12 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         // 截图
         BufferedImage img = screenshot(false);
         this.lastBoardImg = img;
-        boolean result1 = findChessBoardWithModel(img, board, this.aiModel);
-        if(result1){
-            return true;
-        }
-        //第一个模型识别不出来 尝试使用第二个
-        return findChessBoardWithModel(img, board, this.supportAiModel);
+        return findChessBoardWithModel(img, board, this.aiModel);
+//        if(result1){
+//            return true;
+//        }
+//        //第一个模型识别不出来 尝试使用第二个
+//        return findChessBoardWithModel(img, board, this.supportAiModel);
     }
 
     private boolean findChessBoardWithModel(BufferedImage img,char[][] board,OnnxModel model){

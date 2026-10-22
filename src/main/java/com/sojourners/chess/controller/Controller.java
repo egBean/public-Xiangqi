@@ -1230,10 +1230,10 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
 
     private void importFromBufferImage(BufferedImage img) {
         char[][] result = graphLinker.findChessBoard(img);
-        if (result == null || !XiangqiUtils.validateChessBoard(result)) {
-            //如果局面不合法 尝试用辅助模型
-            result = graphLinker.findChessBoardUseSupportModel(img);
-        }
+//        if (result == null || !XiangqiUtils.validateChessBoard(result)) {
+//            //如果局面不合法 尝试用辅助模型
+//            result = graphLinker.findChessBoardUseSupportModel(img);
+//        }
         if (result == null) {
             return;
         }
