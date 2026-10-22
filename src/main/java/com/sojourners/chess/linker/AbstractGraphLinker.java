@@ -102,32 +102,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     @Override
     public void run() {
-        try {
-            scanBoards();
-        } catch (Throwable t) {
-            onScanError(t);
-        }
-    }
-
-    /**
-     * 扫描线程异常退出：记录日志、保存棋盘截图，并回调关闭连线
-     */
-    private void onScanError(Throwable t) {
-        // 正常停止（用户关闭连线）不当作异常
-        if (t instanceof InterruptedException || Thread.currentThread().isInterrupted()) {
-            return;
-        }
-        // 写入日志文件（Main 已将 System.err 双写到 log/app.log）
-        System.err.println("[" + DateUtils.getDateTimeString(new Date()) + "] 连线扫描线程异常退出: " + t);
-        t.printStackTrace();
-        // 保存识别的棋盘截图，便于排查
-        saveErrorBoardImage();
-        // 通知界面关闭连线，用户可以重新点击连线
-        try {
-            callBack.linkerError(t);
-        } catch (Throwable ignore) {
-            ignore.printStackTrace();
-        }
+        scanBoards();
     }
 
     /**

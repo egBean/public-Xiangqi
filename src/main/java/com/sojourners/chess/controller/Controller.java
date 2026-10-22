@@ -2133,17 +2133,6 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         return "观战模式".equals(linkComboBox.getValue());
     }
 
-    /**
-     * 连线扫描线程异常退出：关闭连线，用户可以手动重新点击连线
-     */
-    @Override
-    public void linkerError(Throwable e) {
-        Platform.runLater(() -> {
-            if (linkMode.getValue()) {
-                stopGraphLink();
-            }
-        });
-    }
 
     @Override
     public void linkerMove(int x1, int y1, int x2, int y2) {
