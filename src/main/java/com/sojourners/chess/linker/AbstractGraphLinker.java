@@ -169,6 +169,9 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                                     }
                                 }
                                 if (findBoardPosition(prevBoardPos, RECALIBRATE_EXPAND[i])) {
+                                    // 重找棋盘坐标成功也记录一下日志
+                                    logRecognitionError("连续 " + RECALIBRATE_FAILS + " 次识别棋盘内容失败后，"
+                                            + "重新寻找棋盘坐标连续 " + (i+1) + " 次成功!");
                                     found = true;
                                     break;
                                 }
