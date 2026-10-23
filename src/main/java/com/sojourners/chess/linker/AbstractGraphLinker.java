@@ -39,9 +39,9 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     private static final int RECALIBRATE_FAILS = 10;
 
     /**
-     * 重新寻找棋盘坐标的最大尝试次数
+     * 重新寻找棋盘坐标时每次尝试的放大比例（相对上一帧棋盘区域的宽/高），数组长度即尝试次数
      */
-    private static final int RECALIBRATE_TIMES = 3;
+    private static final double[] RECALIBRATE_EXPAND = {0.1, 0.15, 0.2};
 
     /**
      * 每次重试找棋盘坐标前的等待时间（毫秒），避免连续抓到同一帧异常画面
@@ -158,15 +158,17 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                         // 连续识别棋盘内容失败：先重新寻找棋盘坐标（只重算裁剪区域，不调 initChessBoard，棋谱与引擎局面保留）
                         if (++failCount >= RECALIBRATE_FAILS) {
                             failCount = 0;
+                            // 只在上一帧棋盘区域向外放大一点点的范围内重找（比整窗截图识别更准、更快，也不会误抓到别的棋盘）
+                            Rectangle prevBoardPos = this.boardPos;
                             boolean found = false;
-                            for (int i = 0; i < RECALIBRATE_TIMES; i++) {
+                            for (int i = 0; i < RECALIBRATE_EXPAND.length; i++) {
                                 if (i > 0) {
                                     sleep(RECALIBRATE_RETRY_SLEEP);
                                     if (Thread.currentThread().isInterrupted()) {
                                         return;
                                     }
                                 }
-                                if (findBoardPosition()) {
+                                if (findBoardPosition(prevBoardPos, RECALIBRATE_EXPAND[i])) {
                                     found = true;
                                     break;
                                 }
@@ -174,7 +176,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                             if (!found) {
                                 // 重找棋盘坐标也失败：回外层按原流程重新找棋盘并初始化棋盘
                                 logRecognitionError("连续 " + RECALIBRATE_FAILS + " 次识别棋盘内容失败后，"
-                                        + "重新寻找棋盘坐标连续 " + RECALIBRATE_TIMES + " 次也失败，回外层重新找棋盘并初始化棋盘");
+                                        + "重新寻找棋盘坐标连续 " + RECALIBRATE_EXPAND.length + " 次也失败，回外层重新找棋盘并初始化棋盘");
                                 break;
                             }
                         }
@@ -579,13 +581,41 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     }
 
     /**
-     * 寻找棋盘区域
+     * 寻找棋盘区域（整窗截图后识别）
      * @return
      */
     boolean findBoardPosition() {
-        BufferedImage img = screenshot(true);
-        this.boardPos = this.aiModel.findBoardPosition(img);
-        return this.boardPos != null;
+        return findBoardPosition(null, 0);
+    }
+
+    /**
+     * 寻找棋盘区域
+     * @param prev  上一帧的棋盘区域（窗口内坐标），非空时只截取它向外放大 scale 倍后的局部区域再识别
+     * @param scale 放大比例（相对棋盘宽/高），如 0.1 表示每边放大 10%
+     * @return
+     */
+    boolean findBoardPosition(Rectangle prev, double scale) {
+        Rectangle region = null;
+        if (prev != null) {
+            int dx = (int) Math.round(prev.width * scale);
+            int dy = (int) Math.round(prev.height * scale);
+            region = new Rectangle(prev.x - dx, prev.y - dy, prev.width + dx * 2, prev.height + dy * 2);
+        }
+        BufferedImage img = screenshot(region);
+        if (img == null) {
+            return false;
+        }
+        Rectangle pos = this.aiModel.findBoardPosition(img);
+        if (pos == null) {
+            return false;
+        }
+        if (region != null) {
+            // 模型返回的是局部裁剪图内的坐标，换算回窗口坐标
+            pos.x += region.x;
+            pos.y += region.y;
+        }
+        this.boardPos = pos;
+        return true;
     }
 
     /**
@@ -597,23 +627,28 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     /**
      * 截图
-     * @param fullScreen
+     * @param region 需要截取的窗口内区域，null 表示整窗
+     * @return
+     */
+    BufferedImage screenshot(Rectangle region) {
+        if (prop.isLinkBackMode()) {
+            return screenshotByBack(region);
+        }
+        Rectangle pos = getTargetWindowPosition();
+        if (region != null) {
+            pos.setLocation(pos.x + region.x, pos.y + region.y);
+            pos.setSize(region.width, region.height);
+        }
+        return screenshotByFront(pos);
+    }
+
+    /**
+     * 截图
+     * @param fullScreen true 截整窗，false 只截当前棋盘区域
      * @return
      */
     BufferedImage screenshot(boolean fullScreen) {
-        if (prop.isLinkBackMode()) {
-            BufferedImage img = screenshotByBack(fullScreen ? null : boardPos);
-            return img;
-
-        } else {
-            Rectangle pos = getTargetWindowPosition();
-            if (!fullScreen) {
-                pos.setLocation(pos.x + boardPos.x, pos.y + boardPos.y);
-                pos.setSize(boardPos.width, boardPos.height);
-            }
-            BufferedImage img = screenshotByFront(pos);
-            return img;
-        }
+        return screenshot(fullScreen ? null : boardPos);
     }
 
 
