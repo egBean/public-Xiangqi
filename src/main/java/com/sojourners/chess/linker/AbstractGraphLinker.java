@@ -39,6 +39,16 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     private static final int RECALIBRATE_FAILS = 10;
 
     /**
+     * flag=4 连续多少帧后重新寻找一次棋盘坐标
+     */
+    private static final int RECALIBRATE_FLAG4_STEP = 9;
+
+    /**
+     * flag=4 时最多重新寻找棋盘坐标几次，超过后回外层重新初始化棋盘（9 * 3 = 27 帧）
+     */
+    private static final int RECALIBRATE_FLAG4_TIMES = 3;
+
+    /**
      * 重新寻找棋盘坐标时每次尝试的放大比例（相对上一帧棋盘区域的宽/高），数组长度即尝试次数
      */
     private static final double[] RECALIBRATE_EXPAND = {0.1, 0.15, 0.2};
@@ -158,28 +168,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                         // 连续识别棋盘内容失败：先重新寻找棋盘坐标（只重算裁剪区域，不调 initChessBoard，棋谱与引擎局面保留）
                         if (++failCount >= RECALIBRATE_FAILS) {
                             failCount = 0;
-                            // 只在上一帧棋盘区域向外放大一点点的范围内重找（比整窗截图识别更准、更快，也不会误抓到别的棋盘）
-                            Rectangle prevBoardPos = this.boardPos;
-                            boolean found = false;
-                            for (int i = 0; i < RECALIBRATE_EXPAND.length; i++) {
-                                if (i > 0) {
-                                    sleep(RECALIBRATE_RETRY_SLEEP);
-                                    if (Thread.currentThread().isInterrupted()) {
-                                        return;
-                                    }
-                                }
-                                if (findBoardPosition(prevBoardPos, RECALIBRATE_EXPAND[i])) {
-                                    // 重找棋盘坐标成功也记录一下日志
-                                    logRecognitionError("连续 " + RECALIBRATE_FAILS + " 次识别棋盘内容失败后，"
-                                            + "重新寻找棋盘坐标连续 " + (i+1) + " 次成功!");
-                                    found = true;
-                                    break;
-                                }
-                            }
-                            if (!found) {
-                                // 重找棋盘坐标也失败：回外层按原流程重新找棋盘并初始化棋盘
-                                logRecognitionError("连续 " + RECALIBRATE_FAILS + " 次识别棋盘内容失败后，"
-                                        + "重新寻找棋盘坐标连续 " + RECALIBRATE_EXPAND.length + " 次也失败，回外层重新找棋盘并初始化棋盘");
+                            if (!recalibrateBoardPosition("连续 " + RECALIBRATE_FAILS + " 次识别棋盘内容失败")) {
                                 break;
                             }
                         }
@@ -256,11 +245,19 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                         }
                         if (action.flag == 4) {
                             count++;
-                            if (count > 9) {
-                                // 连续多次可能识别到新棋局，保存棋盘截图便于排查
-                                logRecognitionError("连续 " + count + " 帧识别到无法解释的局面差异（flag=4），回外层重新找棋盘并初始化棋盘");
-                                saveErrorBoardImage();
-                                break;
+                            // 每连续 9 帧无法解释的局面差异，先重找一次棋盘坐标后原地继续识别（不重新初始化棋盘）
+                            if (count % RECALIBRATE_FLAG4_STEP == 0) {
+                                if (count >= RECALIBRATE_FLAG4_STEP * RECALIBRATE_FLAG4_TIMES) {
+                                    // 重找过多次仍然连续异常：回外层重新找棋盘并初始化棋盘
+                                    logRecognitionError("连续 " + count + " 帧识别到无法解释的局面差异（flag=4），回外层重新找棋盘并初始化棋盘");
+                                    saveErrorBoardImage();
+                                    break;
+                                }
+                                // 重找棋盘坐标失败（已打日志）：保存截图并回外层重新找棋盘并初始化棋盘
+                                if (!recalibrateBoardPosition("连续 " + count + " 帧识别到无法解释的局面差异（flag=4）")) {
+                                    saveErrorBoardImage();
+                                    break;
+                                }
                             }
                         } else {
                             count = 0;
@@ -277,7 +274,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
          * 1	目标平台/连线棋盘走了一步，需要同步给引擎	compareBoard() 判断为对方走棋	callBack.linkerMove(...)
          * 2	引擎走了一步，需要同步到目标平台	compareBoard() 判断为引擎走棋	按 isReverse 转换坐标后 autoClick(...)
          * 3	确认识别到新棋局/局面差异过大	diff1 > 2 || diff2 >= 2 && diff3 > 2	break 跳出内层，回到外层重新找棋盘、重新初始化
-         * 4	可能识别到新棋局	差异总数 > 2，但没达到 flag=3	count++，连续超过 9 次也 break 重新初始化
+         * 4	可能识别到新棋局	差异总数 > 2，但没达到 flag=3	count++，每 RECALIBRATE_FLAG4_STEP（9）帧先重找一次棋盘坐标，累计 RECALIBRATE_FLAG4_STEP * RECALIBRATE_FLAG4_TIMES（27）帧仍异常才 break 重新初始化
          */
         int flag;
         int x1;
@@ -619,6 +616,35 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         }
         this.boardPos = pos;
         return true;
+    }
+
+    /**
+     * 重新寻找棋盘坐标（只重算裁剪区域，不重新初始化棋盘，棋谱与引擎局面保留）。
+     *
+     * 与整窗截图识别相比：只在上一帧棋盘区域向外放大 0.1/0.15/0.2（RECALIBRATE_EXPAND）的范围内重找，
+     * 棋盘在模型输入里的有效分辨率更高，也不会误抓到画面里其它棋盘。
+     *
+     * @param reason 日志里的触发原因，如「连续 10 次识别棋盘内容失败」
+     * @return 找到新坐标并更新 boardPos 时返回 true；
+     *         连续 RECALIBRATE_EXPAND.length 次都失败返回 false（调用方负责回外层重新找棋盘并初始化棋盘）
+     */
+    private boolean recalibrateBoardPosition(String reason) {
+        Rectangle prevBoardPos = this.boardPos;
+        for (int attempt = 1; attempt <= RECALIBRATE_EXPAND.length; attempt++) {
+            if (attempt > 1) {
+                sleep(RECALIBRATE_RETRY_SLEEP);
+                if (Thread.currentThread().isInterrupted()) {
+                    return false;
+                }
+            }
+            if (findBoardPosition(prevBoardPos, RECALIBRATE_EXPAND[attempt - 1])) {
+                logRecognitionError(reason + "，重新寻找棋盘坐标第 " + attempt + " 次成功");
+                return true;
+            }
+        }
+        logRecognitionError(reason + "，重新寻找棋盘坐标连续 " + RECALIBRATE_EXPAND.length
+                + " 次也失败，回外层重新找棋盘并初始化棋盘");
+        return false;
     }
 
     /**
