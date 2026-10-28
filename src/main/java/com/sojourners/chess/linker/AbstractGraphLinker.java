@@ -2,21 +2,17 @@ package com.sojourners.chess.linker;
 
 import com.sojourners.chess.board.ChessBoard;
 import com.sojourners.chess.config.Properties;
-import com.sojourners.chess.util.DateUtils;
 import com.sojourners.chess.util.NativeScreenshotUtil;
 import com.sojourners.chess.util.XiangqiUtils;
 import com.sojourners.chess.yolo.OnnxModel;
 import com.sojourners.chess.yolo.Yolo11Model;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 
@@ -35,16 +31,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
      * 日志时间格式：时分秒
      */
     private static final DateTimeFormatter LOG_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
-
-    /**
-     * 连续识别异常多少次后记录一次日志并保存截图
-     */
-    private static final int RECOGNITION_ERROR_THRESHOLD = 10;
-
-    /**
-     * 识别异常后的等待时间（毫秒），避免连续抓到同一帧异常画面
-     */
-    private static final long RECOGNITION_ERROR_SLEEP = 3000;
 
     /**
      * 识别棋盘 暂存
@@ -138,11 +124,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 continue;
             }
 
-            // 连续识别失败次数
-            int findFailCount = 0;
-            // 连续 flag=4 次数
-            int flag4Count = 0;
-
             // 内层识别循环：失败只计数并继续重试，只有 flag=3 才退出重新初始化棋盘
             while (!Thread.currentThread().isInterrupted()) {
                 sleep(prop.getLinkScanTime());
@@ -154,13 +135,8 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 }
 
                 if (!findChessBoard(board2)) {
-                    if (++findFailCount >= RECOGNITION_ERROR_THRESHOLD) {
-                        findFailCount = 0;
-                        reportRecognitionError("连续 " + RECOGNITION_ERROR_THRESHOLD + " 次识别棋盘内容失败", board2);
-                    }
                     continue;
                 }
-                findFailCount = 0;
 
                 boolean isReverse;
                 try {
@@ -171,7 +147,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 }
 
                 if (isSame(board2, callBack.getEngineBoard())) {
-                    flag4Count = 0;
                     continue;
                 }
 
@@ -211,7 +186,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                     return;
                 }
                 if (action == null) {
-                    flag4Count = 0;
                     continue;
                 }
 
@@ -220,7 +194,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 if (action.flag == 1) {
                     // 目标平台同步我方走棋
                     callBack.linkerMove(action.x1, action.y1, action.x2, action.y2);
-                    flag4Count = 0;
 
                 } else if (action.flag == 2) {
                     if (isReverse) {
@@ -231,35 +204,17 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                     }
                     // 触发目标平台走棋
                     autoClick(action.x1, action.y1, action.x2, action.y2);
-                    flag4Count = 0;
 
                 } else if (action.flag == 3) {
-                    // 识别到新棋局/局面差异过大：回外层重新找棋盘并初始化
                     break;
-
                 } else if (action.flag == 4) {
-                    // 连续 10 次无法解释的局面差异才记录一次，然后继续识别
-                    if (++flag4Count >= RECOGNITION_ERROR_THRESHOLD) {
-                        flag4Count = 0;
-                        reportRecognitionError("连续 " + RECOGNITION_ERROR_THRESHOLD + " 次识别到可能的新棋局（flag=4）", board2);
-                    }
+                    String fen = ChessBoard.fenCode(board2, null);
+                    System.err.println("[linker] 棋盘识别错误，新fen为：" + fen);
                 }
             }
         }
     }
 
-    /**
-     * 识别异常上报：睡眠 3 秒，记录 FEN 并保存当前截图到 errorImg
-     */
-    private void reportRecognitionError(String reason, char[][] board) {
-        sleep(RECOGNITION_ERROR_SLEEP);
-        if (Thread.currentThread().isInterrupted()) {
-            return;
-        }
-        String fen = ChessBoard.fenCode(board, null);
-        String path = saveErrorBoardImage();
-        logRecognitionError(reason + "，FEN：" + fen + "，截图：" + path);
-    }
 
     class Action {
         /**
@@ -650,38 +605,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         return f;
     }
 
-    /**
-     * 识别异常时，把识别的棋盘截图保存到项目根目录 errorImg 下，便于后期调试
-     *
-     * @return 保存成功返回文件绝对路径，否则返回 null
-     */
-    private String saveErrorBoardImage() {
-        BufferedImage img = this.lastBoardImg;
-        if (img == null) {
-            return null;
-        }
-        try {
-            File dir = new File(System.getProperty("user.dir"), "errorImg");
-            if (!dir.exists() && !dir.mkdirs()) {
-                System.err.println("create errorImg dir failed: " + dir.getAbsolutePath());
-                return null;
-            }
-            File file = new File(dir, "error_" + DateUtils.getDateTimeString(new Date()) + ".png");
-            ImageIO.write(img, "png", file);
-            System.out.println("save error board image: " + file.getAbsolutePath());
-            return file.getAbsolutePath();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    /**
-     * 输出带时间的识别错误日志（System.err 由 Main 双写到 log/app.log）
-     */
-    private static void logRecognitionError(String message) {
-        System.err.println("[linker] " + LOG_TIME_FORMATTER.format(LocalTime.now()) + " 错误：" + message);
-    }
 
     private boolean reverse(char[][] board) throws Exception {
         // 是否翻转
