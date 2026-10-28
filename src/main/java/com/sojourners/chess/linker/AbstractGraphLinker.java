@@ -5,7 +5,6 @@ import com.sojourners.chess.config.Properties;
 import com.sojourners.chess.util.DateUtils;
 import com.sojourners.chess.util.NativeScreenshotUtil;
 import com.sojourners.chess.util.XiangqiUtils;
-import com.sojourners.chess.yolo.ChessRecognitionModel;
 import com.sojourners.chess.yolo.OnnxModel;
 import com.sojourners.chess.yolo.Yolo11Model;
 
@@ -19,7 +18,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 
 public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
@@ -34,34 +32,19 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     private Rectangle boardPos;
 
     /**
-     * 连续识别失败多少次后重新寻找棋盘坐标（只重算裁剪区域，不重新初始化棋盘）
-     */
-    private static final int RECALIBRATE_FAILS = 10;
-
-    /**
-     * flag=4 连续多少帧后重新寻找一次棋盘坐标
-     */
-    private static final int RECALIBRATE_FLAG4_STEP = 9;
-
-    /**
-     * flag=4 时最多重新寻找棋盘坐标几次，超过后回外层重新初始化棋盘（9 * 3 = 27 帧）
-     */
-    private static final int RECALIBRATE_FLAG4_TIMES = 3;
-
-    /**
-     * 重新寻找棋盘坐标时每次尝试的放大比例（相对上一帧棋盘区域的宽/高），数组长度即尝试次数
-     */
-    private static final double[] RECALIBRATE_EXPAND = {0.1, 0.15, 0.2};
-
-    /**
-     * 每次重试找棋盘坐标前的等待时间（毫秒），避免连续抓到同一帧异常画面
-     */
-    private static final long RECALIBRATE_RETRY_SLEEP = 500;
-
-    /**
      * 日志时间格式：时分秒
      */
     private static final DateTimeFormatter LOG_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
+
+    /**
+     * 连续识别异常多少次后记录一次日志并保存截图
+     */
+    private static final int RECOGNITION_ERROR_THRESHOLD = 10;
+
+    /**
+     * 识别异常后的等待时间（毫秒），避免连续抓到同一帧异常画面
+     */
+    private static final long RECOGNITION_ERROR_SLEEP = 3000;
 
     /**
      * 识别棋盘 暂存
@@ -77,7 +60,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     private LinkerCallBack callBack;
 
     private Robot robot;
-
 
     private volatile boolean pause;
 
@@ -129,6 +111,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     public void pause() {
         this.pause = true;
     }
+
     public void resume() {
         this.pause = false;
     }
@@ -154,136 +137,147 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 sleep(1000);
                 continue;
             }
-            int count = 0;
+
             // 连续识别失败次数
-            int failCount = 0;
+            int findFailCount = 0;
+            // 连续 flag=4 次数
+            int flag4Count = 0;
+
+            // 内层识别循环：失败只计数并继续重试，只有 flag=3 才退出重新初始化棋盘
             while (!Thread.currentThread().isInterrupted()) {
                 sleep(prop.getLinkScanTime());
                 if (Thread.currentThread().isInterrupted()) {
                     return;
                 }
-                if (!callBack.isThinking() && !pause) {
+                if (callBack.isThinking() || pause) {
+                    continue;
+                }
 
-                    if (!findChessBoard(board2)) {
-                        // 连续识别棋盘内容失败：先重新寻找棋盘坐标（只重算裁剪区域，不调 initChessBoard，棋谱与引擎局面保留）
-                        if (++failCount >= RECALIBRATE_FAILS) {
-                            failCount = 0;
-                            if (!recalibrateBoardPosition("连续 " + RECALIBRATE_FAILS + " 次识别棋盘内容失败")) {
-                                saveErrorBoardImage();
-                                break;
-                            }
+                if (!findChessBoard(board2)) {
+                    if (++findFailCount >= RECOGNITION_ERROR_THRESHOLD) {
+                        findFailCount = 0;
+                        reportRecognitionError("连续 " + RECOGNITION_ERROR_THRESHOLD + " 次识别棋盘内容失败", board2);
+                    }
+                    continue;
+                }
+                findFailCount = 0;
+
+                boolean isReverse;
+                try {
+                    isReverse = reverse(board2);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    continue;
+                }
+
+                if (isSame(board2, callBack.getEngineBoard())) {
+                    flag4Count = 0;
+                    continue;
+                }
+
+                Action action = compareBoard(board2, callBack.getEngineBoard(), isReverse, callBack.isWatchMode());
+                if (prop.isLinkAnimation() && needConfirm(board2, callBack.getEngineBoard(), action)) {
+                    boolean f = false;
+                    do {
+                        if (Thread.currentThread().isInterrupted()) {
+                            return;
                         }
-                        continue;
-                    }
-                    failCount = 0;
+                        char[][] tmp = board1;
+                        board1 = board2;
+                        board2 = tmp;
 
-                    boolean isReverse;
-                    try {
-                        isReverse = reverse(board2);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        continue;
-                    }
-
-                    if (isSame(board2, callBack.getEngineBoard())) {
-                        count = 0;
-                        continue;
-                    }
-
-                    Action action = compareBoard(board2, callBack.getEngineBoard(), isReverse, callBack.isWatchMode());
-                    if (prop.isLinkAnimation() && needConfirm(board2, callBack.getEngineBoard(), action)) {
-                        boolean f = false;
-                        do {
-                            if (Thread.currentThread().isInterrupted()) {
-                                return;
-                            }
-                            char[][] tmp = board1;
-                            board1 = board2;
-                            board2 = tmp;
-
-                            if (!findChessBoard(board2)) {
-                                f = true;
-                                break;
-                            }
-
-                            try {
-                                isReverse = reverse(board2);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                f = true;
-                                break;
-                            }
-                        } while (!isSame(board1, board2));
-
-                        if (f) continue;
-
-                        action = compareBoard(board2, callBack.getEngineBoard(), isReverse, callBack.isWatchMode());
-                    }
-
-                    if (Thread.currentThread().isInterrupted()) {
-                        return;
-                    }
-                    if (action != null) {
-                        System.out.println("action " + action);
-
-                        if (action.flag == 1) {
-                            //目标平台同步我方走棋
-                            callBack.linkerMove(action.x1, action.y1, action.x2, action.y2);
-
-                        } else if (action.flag == 2) {
-
-                            if (isReverse) {
-                                action.y1 = 9 - action.y1;
-                                action.y2 = 9 - action.y2;
-                                action.x1 = 8 - action.x1;
-                                action.x2 = 8 - action.x2;
-                            }
-                            //触发目标平台走棋
-                            autoClick(action.x1, action.y1, action.x2, action.y2);
-
-                        } else if (action.flag == 3) {
+                        if (!findChessBoard(board2)) {
+                            f = true;
                             break;
                         }
-                        if (action.flag == 4) {
-                            count++;
-                            // 每连续 9 帧无法解释的局面差异，先重找一次棋盘坐标后原地继续识别（不重新初始化棋盘）
-                            if (count % RECALIBRATE_FLAG4_STEP == 0) {
-                                if (count >= RECALIBRATE_FLAG4_STEP * RECALIBRATE_FLAG4_TIMES) {
-                                    // 重找过多次仍然连续异常：回外层重新找棋盘并初始化棋盘
-                                    logRecognitionError("连续 " + count + " 帧识别到无法解释的局面差异（flag=4），回外层重新找棋盘并初始化棋盘");
-                                    saveErrorBoardImage();
-                                    break;
-                                }
-                                // 重找棋盘坐标失败（已打日志）：保存截图并回外层重新找棋盘并初始化棋盘
-                                if (!recalibrateBoardPosition("连续 " + count + " 帧识别到无法解释的局面差异（flag=4）")) {
-                                    break;
-                                }
-                            }
-                        } else {
-                            count = 0;
+
+                        try {
+                            isReverse = reverse(board2);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            f = true;
+                            break;
                         }
+                    } while (!isSame(board1, board2));
+
+                    if (f) {
+                        continue;
                     }
 
+                    action = compareBoard(board2, callBack.getEngineBoard(), isReverse, callBack.isWatchMode());
+                }
+
+                if (Thread.currentThread().isInterrupted()) {
+                    return;
+                }
+                if (action == null) {
+                    flag4Count = 0;
+                    continue;
+                }
+
+                System.out.println("action " + action);
+
+                if (action.flag == 1) {
+                    // 目标平台同步我方走棋
+                    callBack.linkerMove(action.x1, action.y1, action.x2, action.y2);
+                    flag4Count = 0;
+
+                } else if (action.flag == 2) {
+                    if (isReverse) {
+                        action.y1 = 9 - action.y1;
+                        action.y2 = 9 - action.y2;
+                        action.x1 = 8 - action.x1;
+                        action.x2 = 8 - action.x2;
+                    }
+                    // 触发目标平台走棋
+                    autoClick(action.x1, action.y1, action.x2, action.y2);
+                    flag4Count = 0;
+
+                } else if (action.flag == 3) {
+                    // 识别到新棋局/局面差异过大：回外层重新找棋盘并初始化
+                    break;
+
+                } else if (action.flag == 4) {
+                    // 连续 10 次无法解释的局面差异才记录一次，然后继续识别
+                    if (++flag4Count >= RECOGNITION_ERROR_THRESHOLD) {
+                        flag4Count = 0;
+                        reportRecognitionError("连续 " + RECOGNITION_ERROR_THRESHOLD + " 次识别到可能的新棋局（flag=4）", board2);
+                    }
                 }
             }
         }
     }
 
+    /**
+     * 识别异常上报：睡眠 3 秒，记录 FEN 并保存当前截图到 errorImg
+     */
+    private void reportRecognitionError(String reason, char[][] board) {
+        sleep(RECOGNITION_ERROR_SLEEP);
+        if (Thread.currentThread().isInterrupted()) {
+            return;
+        }
+        String fen = ChessBoard.fenCode(board, null);
+        String path = saveErrorBoardImage();
+        logRecognitionError(reason + "，FEN：" + fen + "，截图：" + path);
+    }
+
     class Action {
         /**
-         * 1	目标平台/连线棋盘走了一步，需要同步给引擎	compareBoard() 判断为对方走棋	callBack.linkerMove(...)
-         * 2	引擎走了一步，需要同步到目标平台	compareBoard() 判断为引擎走棋	按 isReverse 转换坐标后 autoClick(...)
-         * 3	确认识别到新棋局/局面差异过大	diff1 > 2 || diff2 >= 2 && diff3 > 2	break 跳出内层，回到外层重新找棋盘、重新初始化
-         * 4	可能识别到新棋局	差异总数 > 2，但没达到 flag=3	count++，每 RECALIBRATE_FLAG4_STEP（9）帧先重找一次棋盘坐标，累计 RECALIBRATE_FLAG4_STEP * RECALIBRATE_FLAG4_TIMES（27）帧仍异常才 break 重新初始化
+         * 1    目标平台/连线棋盘走了一步，需要同步给引擎    compareBoard() 判断为对方走棋    callBack.linkerMove(...)
+         * 2    引擎走了一步，需要同步到目标平台    compareBoard() 判断为引擎走棋    按 isReverse 转换坐标后 autoClick(...)
+         * 3    确认识别到新棋局/局面差异过大    diff1 > 2 || diff2 >= 2 && diff3 > 2    break 跳出内层，回到外层重新找棋盘、重新初始化
+         * 4    可能识别到新棋局    差异总数异常但未达到 flag=3，连续 10 次才记录日志和截图，然后继续下一轮识别
          */
         int flag;
         int x1;
         int y1;
         int x2;
         int y2;
+
         public Action(int flag) {
             this.flag = flag;
         }
+
         public Action(int flag, int x1, int y1, int x2, int y2) {
             this.flag = flag;
             this.x1 = x1;
@@ -392,9 +386,10 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     /**
      * 对比棋盘，计算出当前操作
      * flag： 1对方已走棋，需要同步到引擎
-     *      2引擎已走棋，需要同步到目标平台
-     *      3识别到新棋局
-     *      4可能识别到新棋局
+     *       2引擎已走棋，需要同步到目标平台
+     *       3识别到新棋局
+     *       4可能识别到新棋局
+     *
      * @param linkBoard
      * @param engineBoard
      * @param robotBlack
@@ -424,8 +419,8 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         if (total == 0) {
             return null;
         }
-        //变化太多 直接重新识别棋盘
-        if(total > 4){
+        // 变化太多 直接重新识别棋盘
+        if (total > 4) {
             return new Action(3);
         }
         // 一步棋必然产生 2 个差异点；其它数量说明是识别错误或新棋局
@@ -535,6 +530,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     /**
      * 前台截图
+     *
      * @param windowPos
      * @return
      */
@@ -548,6 +544,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     /**
      * 前台点击
+     *
      * @param windowPos
      * @param p1
      * @param p2
@@ -557,7 +554,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
         Point mouse = MouseInfo.getPointerInfo().getLocation();
 
-        robot.mouseMove(windowPos.x + p1.x, windowPos.y+ p1.y);
+        robot.mouseMove(windowPos.x + p1.x, windowPos.y + p1.y);
 
         robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
         if (prop.getMouseClickDelay() > 0) {
@@ -582,26 +579,11 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     /**
      * 寻找棋盘区域（整窗截图后识别）
+     *
      * @return
      */
     boolean findBoardPosition() {
-        return findBoardPosition(null, 0);
-    }
-
-    /**
-     * 寻找棋盘区域
-     * @param prev  上一帧的棋盘区域（窗口内坐标），非空时只截取它向外放大 scale 倍后的局部区域再识别
-     * @param scale 放大比例（相对棋盘宽/高），如 0.1 表示每边放大 10%
-     * @return
-     */
-    boolean findBoardPosition(Rectangle prev, double scale) {
-        Rectangle region = null;
-        if (prev != null) {
-            int dx = (int) Math.round(prev.width * scale);
-            int dy = (int) Math.round(prev.height * scale);
-            region = new Rectangle(prev.x - dx, prev.y - dy, prev.width + dx * 2, prev.height + dy * 2);
-        }
-        BufferedImage img = screenshot(region);
+        BufferedImage img = screenshot(null);
         if (img == null) {
             return false;
         }
@@ -609,53 +591,13 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         if (pos == null) {
             return false;
         }
-        if (region != null) {
-            // 模型返回的是局部裁剪图内的坐标，换算回窗口坐标
-            pos.x += region.x;
-            pos.y += region.y;
-        }
         this.boardPos = pos;
         return true;
     }
 
     /**
-     * 重新寻找棋盘坐标（只重算裁剪区域，不重新初始化棋盘，棋谱与引擎局面保留）。
-     *
-     * 与整窗截图识别相比：只在上一帧棋盘区域向外放大 0.1/0.15/0.2（RECALIBRATE_EXPAND）的范围内重找，
-     * 棋盘在模型输入里的有效分辨率更高，也不会误抓到画面里其它棋盘。
-     *
-     * @param reason 日志里的触发原因，如「连续 10 次识别棋盘内容失败」
-     * @return 找到新坐标并更新 boardPos 时返回 true；
-     *         连续 RECALIBRATE_EXPAND.length 次都失败返回 false（调用方负责回外层重新找棋盘并初始化棋盘）
-     */
-    private boolean recalibrateBoardPosition(String reason) {
-        Rectangle prevBoardPos = this.boardPos;
-        for (int attempt = 1; attempt <= RECALIBRATE_EXPAND.length; attempt++) {
-            if (attempt > 1) {
-                sleep(RECALIBRATE_RETRY_SLEEP);
-                if (Thread.currentThread().isInterrupted()) {
-                    return false;
-                }
-            }
-            if (findBoardPosition(prevBoardPos, RECALIBRATE_EXPAND[attempt - 1])) {
-                logRecognitionError(reason + "，重新寻找棋盘坐标第 " + attempt + " 次成功");
-                return true;
-            }
-        }
-        logRecognitionError(reason + "，重新寻找棋盘坐标连续 " + RECALIBRATE_EXPAND.length
-                + " 次也失败，回外层重新找棋盘并初始化棋盘");
-        return false;
-    }
-
-    /**
-     * 输出带时间的识别错误日志（System.err 由 Main 双写到 log/app.log）
-     */
-    private static void logRecognitionError(String message) {
-        System.err.println("[linker] " + LOG_TIME_FORMATTER.format(LocalTime.now()) + " 错误：" + message);
-    }
-
-    /**
      * 截图
+     *
      * @param region 需要截取的窗口内区域，null 表示整窗
      * @return
      */
@@ -673,6 +615,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     /**
      * 截图
+     *
      * @param fullScreen true 截整窗，false 只截当前棋盘区域
      * @return
      */
@@ -693,7 +636,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 //        return findChessBoardWithModel(img, board, this.supportAiModel);
     }
 
-    private boolean findChessBoardWithModel(BufferedImage img,char[][] board,OnnxModel model){
+    private boolean findChessBoardWithModel(BufferedImage img, char[][] board, OnnxModel model) {
         // ai识别棋盘棋子
         if (!model.findChessBoard(img, board)) {
             return false;
@@ -709,24 +652,35 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     /**
      * 识别异常时，把识别的棋盘截图保存到项目根目录 errorImg 下，便于后期调试
+     *
+     * @return 保存成功返回文件绝对路径，否则返回 null
      */
-    private void saveErrorBoardImage() {
+    private String saveErrorBoardImage() {
         BufferedImage img = this.lastBoardImg;
         if (img == null) {
-            return;
+            return null;
         }
         try {
             File dir = new File(System.getProperty("user.dir"), "errorImg");
             if (!dir.exists() && !dir.mkdirs()) {
                 System.err.println("create errorImg dir failed: " + dir.getAbsolutePath());
-                return;
+                return null;
             }
             File file = new File(dir, "error_" + DateUtils.getDateTimeString(new Date()) + ".png");
             ImageIO.write(img, "png", file);
             System.out.println("save error board image: " + file.getAbsolutePath());
+            return file.getAbsolutePath();
         } catch (Exception e) {
             e.printStackTrace();
+            return null;
         }
+    }
+
+    /**
+     * 输出带时间的识别错误日志（System.err 由 Main 双写到 log/app.log）
+     */
+    private static void logRecognitionError(String message) {
+        System.err.println("[linker] " + LOG_TIME_FORMATTER.format(LocalTime.now()) + " 错误：" + message);
     }
 
     private boolean reverse(char[][] board) throws Exception {
@@ -759,6 +713,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     /**
      * 初始化棋盘局面.如果棋盘没有翻转，默认是红走，如果是开始局面，也默认是红走。只是一种猜测，实际上可能棋盘同步时，是轮到黑走
+     *
      * @return
      */
     private boolean initChessBoard() {
@@ -787,6 +742,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     /**
      * 自动点击走棋
+     *
      * @param x1
      * @param y1
      * @param x2
@@ -803,6 +759,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
             mouseClickByFront(windowPos, p1, p2);
         }
     }
+
     private Point getPosition(int x, int y) {
         double pieceWith = boardPos.width / (8 + OnnxModel.PADDING * 2);
         double pieceHeight = boardPos.height / (9 + OnnxModel.PADDING * 2);
