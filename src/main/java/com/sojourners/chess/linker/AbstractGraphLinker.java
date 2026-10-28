@@ -51,10 +51,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     private Properties prop;
 
-    /**
-     * 最近一次用于识别棋盘的截图，识别异常时保存用于调试
-     */
-    private volatile BufferedImage lastBoardImg;
 
     public AbstractGraphLinker(LinkerCallBack callBack) throws AWTException {
         this.callBack = callBack;
@@ -582,7 +578,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     private boolean findChessBoard(char[][] board) {
         // 截图
         BufferedImage img = screenshot(false);
-        this.lastBoardImg = img;
         return findChessBoardWithModel(img, board, this.aiModel);
 //        if(result1){
 //            return true;
