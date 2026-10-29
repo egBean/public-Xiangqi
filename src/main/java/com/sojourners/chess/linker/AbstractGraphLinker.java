@@ -202,8 +202,8 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                     autoClick(action.x1, action.y1, action.x2, action.y2);
 
                 } else if (action.flag == 3) {
-                    // 重新初始化棋盘时，可能目标平台动画还未走完导致局面识别错误 睡眠3s保证稳定
-                    sleep(3000);
+                    // 重新初始化棋盘时，可能目标平台动画还未走完导致局面识别错误 睡眠2s保证稳定
+                    sleep(2000);
                     break;
                 } else if (action.flag == 4) {
                     String fen = ChessBoard.fenCode(board2, null);
