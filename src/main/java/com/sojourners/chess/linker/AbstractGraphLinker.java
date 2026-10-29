@@ -7,16 +7,59 @@ import com.sojourners.chess.util.XiangqiUtils;
 import com.sojourners.chess.yolo.OnnxModel;
 import com.sojourners.chess.yolo.Yolo11Model;
 
+import nu.pattern.OpenCV;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
+
 import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+import java.io.File;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 
 public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
+
+    /**
+     * OpenCV native 加载，只需一次
+     */
+    static {
+        try {
+            OpenCV.loadLocally();
+        } catch (Throwable t) {
+            System.err.println("[linker] OpenCV 加载失败: " + t.getMessage());
+        }
+    }
+
+    /**
+     * 续盘按钮模板目录（相对项目根目录），目录下所有图片都会作为候选模板
+     */
+    private static final String CONTINUE_TEMPLATE_DIR = "clickImage";
+    /**
+     * 支持的图片扩展名
+     */
+    private static final Set<String> IMAGE_EXTS = Set.of("png", "jpg", "jpeg", "bmp");
+    /**
+     * 每多少次 scan 检测一次续盘按钮
+     */
+    private static final int CONTINUE_CHECK_INTERVAL = 20;
+    /**
+     * 模板匹配阈值，TM_CCOEFF_NORMED，范围 [-1,1]，一般 0.75~0.9
+     */
+    private static final double CONTINUE_MATCH_THRESHOLD = 0.8;
+    /**
+     * 两次点击之间的最小间隔，避免按钮还没消失时重复点击
+     */
+    private static final long CONTINUE_CLICK_COOLDOWN_MS = 5000;
 
     /**
      * 扫描线程
@@ -49,6 +92,26 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     private Properties prop;
 
+    /**
+     * 是否自动续盘：对局结束后检测到"再来一局/继续"按钮时自动点击
+     */
+    private volatile boolean autoContinue = true;
+
+    /**
+     * 续盘按钮模板集合（灰度）。懒加载，null 表示尚未加载过。
+     */
+    private volatile List<Mat> continueTemplates;
+
+    /**
+     * 与 continueTemplates 一一对应的文件名，仅用于日志
+     */
+    private List<String> continueTemplateNames = Collections.emptyList();
+
+    /**
+     * 上次点击续盘按钮的时间戳，用于冷却
+     */
+    private long lastContinueClickTime = 0;
+
 
     public AbstractGraphLinker(LinkerCallBack callBack) throws AWTException {
         this.callBack = callBack;
@@ -56,6 +119,14 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         this.prop = Properties.getInstance();
         this.aiModel = new Yolo11Model();
         this.pause = false;
+    }
+
+    public void setAutoContinue(boolean autoContinue) {
+        this.autoContinue = autoContinue;
+    }
+
+    public boolean isAutoContinue() {
+        return autoContinue;
     }
 
     /**
@@ -117,8 +188,17 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 continue;
             }
 
+            // 每进入一轮识别，scan 计数从 0 开始
+            int scanCount = 0;
+
             // 内层识别循环：失败只计数并继续重试，只有 flag=3 才退出重新初始化棋盘
             while (!Thread.currentThread().isInterrupted()) {
+                scanCount++;
+                // 每 CONTINUE_CHECK_INTERVAL 次 scan，整窗截屏一次，检测续盘按钮（非观战模式下）
+                if (autoContinue && !callBack.isWatchMode() && scanCount % CONTINUE_CHECK_INTERVAL == 0) {
+                    checkAndClickContinue();
+                }
+
                 sleep(prop.getLinkScanTime());
                 if (Thread.currentThread().isInterrupted()) {
                     return;
@@ -208,6 +288,186 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 }
             }
         }
+    }
+
+    /**
+     * 整窗截屏一次，用 clickImage 目录下所有模板做匹配，任意一张命中阈值就点击命中位置。
+     */
+    private void checkAndClickContinue() {
+        if (Thread.currentThread().isInterrupted() || pause) {
+            return;
+        }
+        // 冷却期内直接跳过，避免按钮还没消失时连点
+        long now = System.currentTimeMillis();
+        if (now - lastContinueClickTime < CONTINUE_CLICK_COOLDOWN_MS) {
+            return;
+        }
+        // 懒加载模板集合（双检锁）
+        List<Mat> templates = this.continueTemplates;
+        if (templates == null) {
+            synchronized (this) {
+                templates = this.continueTemplates;
+                if (templates == null) {
+                    templates = loadContinueTemplates();
+                    this.continueTemplates = templates;
+                }
+            }
+        }
+        if (templates == null || templates.isEmpty()) {
+            return;
+        }
+
+        BufferedImage screen;
+        try {
+            // true = 整窗截图，按钮可能在棋盘之外
+            screen = screenshot(true);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
+        if (screen == null) {
+            return;
+        }
+
+        Mat src = null;
+        Mat result = null;
+        try {
+            src = bufferedImageToGrayMat(screen);
+            result = new Mat();
+
+            double bestScore = -1;
+            int bestIdx = -1;
+            int bestX = 0, bestY = 0;
+
+            // 遍历所有模板，记录最高分的命中
+            for (int i = 0; i < templates.size(); i++) {
+                Mat tmpl = templates.get(i);
+                // 模板比截图还大，跳过
+                if (tmpl.cols() > src.cols() || tmpl.rows() > src.rows()) {
+                    continue;
+                }
+                Imgproc.matchTemplate(src, tmpl, result, Imgproc.TM_CCOEFF_NORMED);
+                Core.MinMaxLocResult mmr = Core.minMaxLoc(result);
+                if (mmr.maxVal > bestScore) {
+                    bestScore = mmr.maxVal;
+                    bestIdx = i;
+                    bestX = (int) mmr.maxLoc.x + tmpl.cols() / 2;
+                    bestY = (int) mmr.maxLoc.y + tmpl.rows() / 2;
+                }
+            }
+
+            if (bestIdx >= 0 && bestScore >= CONTINUE_MATCH_THRESHOLD) {
+                String name = bestIdx < continueTemplateNames.size()
+                        ? continueTemplateNames.get(bestIdx)
+                        : String.valueOf(bestIdx);
+                System.out.println("[linker] 续盘按钮命中，模板=" + name
+                        + " score=" + bestScore + " @" + bestX + "," + bestY);
+                clickContinue(new Point(bestX, bestY));
+                lastContinueClickTime = System.currentTimeMillis();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (src != null) {
+                src.release();
+            }
+            if (result != null) {
+                result.release();
+            }
+        }
+    }
+
+    /**
+     * 扫描 clickImage 目录，加载所有图片作为续盘按钮模板（灰度）。
+     * 任何一步失败都返回已成功加载的部分，不会抛异常。
+     */
+    private List<Mat> loadContinueTemplates() {
+        File dir = new File(CONTINUE_TEMPLATE_DIR);
+        if (!dir.exists() || !dir.isDirectory()) {
+            System.err.println("[linker] 续盘模板目录不存在: " + dir.getAbsolutePath());
+            return Collections.emptyList();
+        }
+        File[] files = dir.listFiles((d, name) -> {
+            int idx = name.lastIndexOf('.');
+            if (idx < 0 || idx == name.length() - 1) {
+                return false;
+            }
+            return IMAGE_EXTS.contains(name.substring(idx + 1).toLowerCase());
+        });
+        if (files == null || files.length == 0) {
+            System.err.println("[linker] 续盘模板目录为空: " + dir.getAbsolutePath());
+            return Collections.emptyList();
+        }
+
+        List<Mat> result = new ArrayList<>();
+        List<String> names = new ArrayList<>();
+        for (File f : files) {
+            try {
+                Mat t = Imgcodecs.imread(f.getAbsolutePath(), Imgcodecs.IMREAD_GRAYSCALE);
+                if (t != null && !t.empty()) {
+                    result.add(t);
+                    names.add(f.getName());
+                } else {
+                    System.err.println("[linker] 模板加载失败: " + f.getAbsolutePath());
+                }
+            } catch (Exception e) {
+                System.err.println("[linker] 模板加载异常: " + f.getAbsolutePath() + " - " + e.getMessage());
+            }
+        }
+        this.continueTemplateNames = names;
+        System.out.println("[linker] 加载续盘模板 " + result.size() + " 个: " + names);
+        return result;
+    }
+
+    /**
+     * BufferedImage 转灰度 Mat
+     */
+    private static Mat bufferedImageToGrayMat(BufferedImage img) {
+        int w = img.getWidth();
+        int h = img.getHeight();
+        // 统一转换为 3BYTE_BGR，保证后续取 DataBufferByte 一定可用
+        BufferedImage converted = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
+        Graphics2D g = converted.createGraphics();
+        g.drawImage(img, 0, 0, null);
+        g.dispose();
+
+        byte[] data = ((DataBufferByte) converted.getRaster().getDataBuffer()).getData();
+        Mat bgr = new Mat(h, w, CvType.CV_8UC3);
+        bgr.put(0, 0, data);
+
+        Mat gray = new Mat();
+        Imgproc.cvtColor(bgr, gray, Imgproc.COLOR_BGR2GRAY);
+        bgr.release();
+        return gray;
+    }
+
+    /**
+     * 单击续盘按钮（窗口内坐标）
+     */
+    private void clickContinue(Point p) {
+        if (prop.isLinkBackMode()) {
+            // 后台模式：传同一个点，具体行为取决于子类实现
+            mouseClickByBack(p, p);
+        } else {
+            clickSingleByFront(getTargetWindowPosition(), p);
+        }
+    }
+
+    /**
+     * 前台单击（区别于 mouseClickByFront 的双击行为）
+     */
+    public void clickSingleByFront(Rectangle windowPos, Point p) {
+        Point mouse = MouseInfo.getPointerInfo() != null
+                ? MouseInfo.getPointerInfo().getLocation()
+                : new Point(0, 0);
+
+        robot.mouseMove(windowPos.x + p.x, windowPos.y + p.y);
+        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+        if (prop.getMouseClickDelay() > 0) {
+            robot.delay(prop.getMouseClickDelay());
+        }
+        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+        robot.mouseMove((int) mouse.getX(), (int) mouse.getY());
     }
 
 
