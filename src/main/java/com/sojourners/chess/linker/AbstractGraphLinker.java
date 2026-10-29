@@ -41,8 +41,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     private OnnxModel aiModel;
 
-    private OnnxModel supportAiModel;
-
     private LinkerCallBack callBack;
 
     private Robot robot;
@@ -57,7 +55,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         robot = new Robot();
         this.prop = Properties.getInstance();
         this.aiModel = new Yolo11Model();
-//        this.supportAiModel = !"yolo11".equalsIgnoreCase(prop.getLinkAiModel()) ? new Yolo11Model() : new ChessRecognitionModel();
         this.pause = false;
     }
 
@@ -581,11 +578,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         // 截图
         BufferedImage img = screenshot(false);
         return findChessBoardWithModel(img, board, this.aiModel);
-//        if(result1){
-//            return true;
-//        }
-//        //第一个模型识别不出来 尝试使用第二个
-//        return findChessBoardWithModel(img, board, this.supportAiModel);
     }
 
     private boolean findChessBoardWithModel(BufferedImage img, char[][] board, OnnxModel model) {
@@ -713,15 +705,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     public char[][] findChessBoard(BufferedImage img) {
         char[][] tmp = new char[10][9];
         if (this.aiModel.findChessBoard(img, tmp)) {
-            return tmp;
-        } else {
-            return null;
-        }
-    }
-
-    public char[][] findChessBoardUseSupportModel(BufferedImage img) {
-        char[][] tmp = new char[10][9];
-        if (this.supportAiModel.findChessBoard(img, tmp)) {
             return tmp;
         } else {
             return null;
