@@ -42,7 +42,8 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     }
 
     /**
-     * 续盘按钮模板目录（相对项目根目录），目录下所有图片都会作为候选模板
+     * 续盘按钮模板根目录（相对项目根目录），其下按平台名分子目录，
+     * 例如 clickImage/天天、clickImage/相弈
      */
     private static final String CONTINUE_TEMPLATE_DIR = "clickImage";
     /**
@@ -95,13 +96,13 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
 
     /**
-     * 续盘按钮模板缓存：key = 模型名（prop.getLinkAiModel()），value = 该模型目录下加载的模板+文件名。
-     * 首次用到某模型时加载，之后一直复用；切换模型时按 key 直接命中对应缓存，无需重启、无需重载。
+     * 续盘按钮模板缓存：key = 平台名（prop.getLinkPlatform()），value = 该平台目录下加载的模板+文件名。
+     * 首次用到某平台时加载，之后一直复用；切换平台时按 key 直接命中对应缓存，无需重启、无需重载。
      */
     private final Map<String, TemplateBundle> continueTemplateCache = new ConcurrentHashMap<>();
 
     /**
-     * 某个模型目录下的一组模板，templates 与 names 一一对应
+     * 某个平台目录下的一组模板，templates 与 names 一一对应
      */
     private record TemplateBundle(List<Mat> templates, List<String> names) {
     }
@@ -333,9 +334,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 if (mmr.maxVal >= CONTINUE_MATCH_THRESHOLD) {
                     int cx = (int) mmr.maxLoc.x + tmpl.cols() / 2;
                     int cy = (int) mmr.maxLoc.y + tmpl.rows() / 2;
-                    String name = (names != null && i < names.size())
-                            ? names.get(i)
-                            : String.valueOf(i);
+                    String name = (i < names.size()) ? names.get(i) : String.valueOf(i);
                     System.out.println("[linker] 续盘按钮命中，模板=" + name
                             + " score=" + mmr.maxVal + " @" + cx + "," + cy);
                     clickContinue(new Point(cx, cy));
@@ -358,20 +357,20 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     /**
      * 从 clickImage/<平台名> 目录加载续盘按钮模板（灰度）。
-     * - model 为 "无"（或空）时返回空 bundle，相当于禁用自动续盘
+     * - platform 为 "无"（或空）时返回空 bundle，相当于禁用自动续盘
      * - 目录不存在 / 目录为空时返回空 bundle
      * 任何一步失败都返回已成功加载的部分，不会抛异常。
      */
-    private TemplateBundle loadContinueTemplates(String model) {
+    private TemplateBundle loadContinueTemplates(String platform) {
         List<Mat> result = new ArrayList<>();
         List<String> names = new ArrayList<>();
 
         // 设置为"无"时，直接返回空列表，不启用自动续盘识别
-        if (model == null || model.isEmpty() || "无".equals(model)) {
+        if (platform == null || platform.isEmpty() || "无".equals(platform)) {
             return new TemplateBundle(result, names);
         }
 
-        File dir = new File(CONTINUE_TEMPLATE_DIR, model);
+        File dir = new File(CONTINUE_TEMPLATE_DIR, platform);
         if (!dir.exists() || !dir.isDirectory()) {
             System.err.println("[linker] 续盘模板目录不存在: " + dir.getAbsolutePath());
             return new TemplateBundle(result, names);
@@ -404,7 +403,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
             }
         }
         System.out.println("[linker] 加载续盘模板 " + result.size()
-                + " 个（模型=" + model + "）: " + names);
+                + " 个（平台=" + platform + "）: " + names);
         return new TemplateBundle(result, names);
     }
 
