@@ -334,7 +334,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 if (mmr.maxVal >= CONTINUE_MATCH_THRESHOLD) {
                     int cx = (int) mmr.maxLoc.x + tmpl.cols() / 2;
                     int cy = (int) mmr.maxLoc.y + tmpl.rows() / 2;
-                    String name = (i < names.size()) ? names.get(i) : String.valueOf(i);
+                    String name = names.get(i);
                     System.out.println("[linker] 续盘按钮命中，模板=" + name
                             + " score=" + mmr.maxVal + " @" + cx + "," + cy);
                     clickContinue(new Point(cx, cy));
@@ -366,7 +366,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         List<String> names = new ArrayList<>();
 
         // 设置为"无"时，直接返回空列表，不启用自动续盘识别
-        if (platform == null || platform.isEmpty() || "无".equals(platform)) {
+        if ("无".equals(platform)) {
             return new TemplateBundle(result, names);
         }
 
