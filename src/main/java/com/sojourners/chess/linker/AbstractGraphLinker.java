@@ -282,7 +282,8 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     }
 
     /**
-     * 整窗截屏一次，用 clickImage/<平台名> 目录下所有模板做匹配，任意一张命中阈值就点击命中位置。
+     * 整窗截屏一次，用 clickImage/<平台名> 目录下所有模板做匹配。
+     * 任意一张命中阈值立即点击并返回，不再匹配后续模板
      */
     private void checkAndClickContinue() {
         if (Thread.currentThread().isInterrupted() || pause) {
@@ -293,7 +294,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         if (now - lastContinueClickTime < CONTINUE_CLICK_COOLDOWN_MS) {
             return;
         }
-        // 按当前模型取缓存，没有就加载该模型目录（computeIfAbsent 保证同一 key 只加载一次）
+        // 按当前平台取缓存，没有就加载该平台目录（computeIfAbsent 保证同一 key 只加载一次）
         String linkPlatform = prop.getLinkPlatform();
         TemplateBundle bundle = continueTemplateCache.computeIfAbsent(linkPlatform, this::loadContinueTemplates);
         List<Mat> templates = bundle.templates();
@@ -320,11 +321,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
             src = bufferedImageToGrayMat(screen);
             result = new Mat();
 
-            double bestScore = -1;
-            int bestIdx = -1;
-            int bestX = 0, bestY = 0;
-
-            // 遍历所有模板，记录最高分的命中
+            // 逐个模板匹配，任意一张命中即点击并返回，不再匹配后续模板
             for (int i = 0; i < templates.size(); i++) {
                 Mat tmpl = templates.get(i);
                 // 模板比截图还大，跳过
@@ -333,22 +330,19 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 }
                 Imgproc.matchTemplate(src, tmpl, result, Imgproc.TM_CCOEFF_NORMED);
                 Core.MinMaxLocResult mmr = Core.minMaxLoc(result);
-                if (mmr.maxVal > bestScore) {
-                    bestScore = mmr.maxVal;
-                    bestIdx = i;
-                    bestX = (int) mmr.maxLoc.x + tmpl.cols() / 2;
-                    bestY = (int) mmr.maxLoc.y + tmpl.rows() / 2;
+                if (mmr.maxVal >= CONTINUE_MATCH_THRESHOLD) {
+                    int cx = (int) mmr.maxLoc.x + tmpl.cols() / 2;
+                    int cy = (int) mmr.maxLoc.y + tmpl.rows() / 2;
+                    String name = (names != null && i < names.size())
+                            ? names.get(i)
+                            : String.valueOf(i);
+                    System.out.println("[linker] 续盘按钮命中，模板=" + name
+                            + " score=" + mmr.maxVal + " @" + cx + "," + cy);
+                    clickContinue(new Point(cx, cy));
+                    lastContinueClickTime = System.currentTimeMillis();
+                    // 命中即返回，finally 会释放 src / result
+                    return;
                 }
-            }
-
-            if (bestIdx >= 0 && bestScore >= CONTINUE_MATCH_THRESHOLD) {
-                String name = (names != null && bestIdx < names.size())
-                        ? names.get(bestIdx)
-                        : String.valueOf(bestIdx);
-                System.out.println("[linker] 续盘按钮命中，模板=" + name
-                        + " score=" + bestScore + " @" + bestX + "," + bestY);
-                clickContinue(new Point(bestX, bestY));
-                lastContinueClickTime = System.currentTimeMillis();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -397,10 +391,12 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         for (File f : files) {
             try {
                 Mat t = Imgcodecs.imread(f.getAbsolutePath(), Imgcodecs.IMREAD_GRAYSCALE);
-                if (t != null && !t.empty()) {
+                if (!t.empty()) {
                     result.add(t);
                     names.add(f.getName());
                 } else {
+                    // 加载失败返回的是空 Mat，也 release 掉，避免留下无用的 native 对象
+                    t.release();
                     System.err.println("[linker] 模板加载失败: " + f.getAbsolutePath());
                 }
             } catch (Exception e) {
