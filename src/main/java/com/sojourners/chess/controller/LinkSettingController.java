@@ -25,7 +25,7 @@ public class LinkSettingController {
     private TextField mouseMoveDelay;
 
     @FXML
-    private ComboBox<String> linkAiModel;
+    private ComboBox<String> linkPlatform;
 
     private Properties prop;
 
@@ -62,12 +62,7 @@ public class LinkSettingController {
             return;
         }
         prop.setMouseMoveDelay(Integer.parseInt(txt));
-
-        if (linkAiModel.getValue() == null) {
-            DialogUtils.showErrorDialog("失败", "请选择识别模型");
-            return;
-        }
-        prop.setLinkAiModel(linkAiModel.getValue());
+        prop.setLinkPlatform(linkPlatform.getValue());
 
         App.closeLinkSetting();
     }
@@ -82,9 +77,9 @@ public class LinkSettingController {
         mouseClickDelay.setText(String.valueOf(prop.getMouseClickDelay()));
         mouseMoveDelay.setText(String.valueOf(prop.getMouseMoveDelay()));
 
-        linkAiModel.getItems().setAll("无","天天", "相弈");
-        String model = prop.getLinkAiModel();
-        linkAiModel.setValue(model);
+        linkPlatform.getItems().setAll("无","天天", "相弈");
+        String model = prop.getLinkPlatform();
+        linkPlatform.setValue(model);
 
     }
 

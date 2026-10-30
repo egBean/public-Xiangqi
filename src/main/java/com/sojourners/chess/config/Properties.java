@@ -159,7 +159,7 @@ public class Properties implements Serializable {
 
     private int mouseClickDelay = 2;
     private int mouseMoveDelay = 0;
-    private String linkAiModel;
+    private String linkPlatform;
     /*
      * 显示棋谱管理
      */
@@ -368,12 +368,12 @@ public class Properties implements Serializable {
         this.mouseMoveDelay = mouseMoveDelay;
     }
 
-    public String getLinkAiModel() {
-        return linkAiModel == null || linkAiModel.isBlank() ? "无" : linkAiModel;
+    public String getLinkPlatform() {
+        return linkPlatform == null || linkPlatform.isBlank() ? "无" : linkPlatform;
     }
 
-    public void setLinkAiModel(String linkAiModel) {
-        this.linkAiModel = linkAiModel;
+    public void setLinkPlatform(String linkPlatform) {
+        this.linkPlatform = linkPlatform;
     }
 
     public List<String> getOpenBookList() {

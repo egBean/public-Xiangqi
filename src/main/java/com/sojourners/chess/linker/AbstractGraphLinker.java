@@ -22,9 +22,10 @@ import java.io.File;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
@@ -94,14 +95,16 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
 
     /**
-     * 续盘按钮模板集合（灰度）。懒加载，null 表示尚未加载过。
+     * 续盘按钮模板缓存：key = 模型名（prop.getLinkAiModel()），value = 该模型目录下加载的模板+文件名。
+     * 首次用到某模型时加载，之后一直复用；切换模型时按 key 直接命中对应缓存，无需重启、无需重载。
      */
-    private volatile List<Mat> continueTemplates;
+    private final Map<String, TemplateBundle> continueTemplateCache = new ConcurrentHashMap<>();
 
     /**
-     * 与 continueTemplates 一一对应的文件名，仅用于日志
+     * 某个模型目录下的一组模板，templates 与 names 一一对应
      */
-    private List<String> continueTemplateNames = Collections.emptyList();
+    private record TemplateBundle(List<Mat> templates, List<String> names) {
+    }
 
     /**
      * 上次点击续盘按钮的时间戳，用于冷却
@@ -279,7 +282,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     }
 
     /**
-     * 整窗截屏一次，用 clickImage 目录下所有模板做匹配，任意一张命中阈值就点击命中位置。
+     * 整窗截屏一次，用 clickImage/<平台名> 目录下所有模板做匹配，任意一张命中阈值就点击命中位置。
      */
     private void checkAndClickContinue() {
         if (Thread.currentThread().isInterrupted() || pause) {
@@ -290,18 +293,12 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         if (now - lastContinueClickTime < CONTINUE_CLICK_COOLDOWN_MS) {
             return;
         }
-        // 懒加载模板集合（双检锁）
-        List<Mat> templates = this.continueTemplates;
-        if (templates == null) {
-            synchronized (this) {
-                templates = this.continueTemplates;
-                if (templates == null) {
-                    templates = loadContinueTemplates();
-                    this.continueTemplates = templates;
-                }
-            }
-        }
-        if (templates == null || templates.isEmpty()) {
+        // 按当前模型取缓存，没有就加载该模型目录（computeIfAbsent 保证同一 key 只加载一次）
+        String linkPlatform = prop.getLinkPlatform();
+        TemplateBundle bundle = continueTemplateCache.computeIfAbsent(linkPlatform, this::loadContinueTemplates);
+        List<Mat> templates = bundle.templates();
+        List<String> names = bundle.names();
+        if (templates.isEmpty()) {
             return;
         }
 
@@ -345,8 +342,8 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
             }
 
             if (bestIdx >= 0 && bestScore >= CONTINUE_MATCH_THRESHOLD) {
-                String name = bestIdx < continueTemplateNames.size()
-                        ? continueTemplateNames.get(bestIdx)
+                String name = (names != null && bestIdx < names.size())
+                        ? names.get(bestIdx)
                         : String.valueOf(bestIdx);
                 System.out.println("[linker] 续盘按钮命中，模板=" + name
                         + " score=" + bestScore + " @" + bestX + "," + bestY);
@@ -366,14 +363,24 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     }
 
     /**
-     * 扫描 clickImage 目录，加载所有图片作为续盘按钮模板（灰度）。
+     * 从 clickImage/<平台名> 目录加载续盘按钮模板（灰度）。
+     * - model 为 "无"（或空）时返回空 bundle，相当于禁用自动续盘
+     * - 目录不存在 / 目录为空时返回空 bundle
      * 任何一步失败都返回已成功加载的部分，不会抛异常。
      */
-    private List<Mat> loadContinueTemplates() {
-        File dir = new File(CONTINUE_TEMPLATE_DIR);
+    private TemplateBundle loadContinueTemplates(String model) {
+        List<Mat> result = new ArrayList<>();
+        List<String> names = new ArrayList<>();
+
+        // 设置为"无"时，直接返回空列表，不启用自动续盘识别
+        if (model == null || model.isEmpty() || "无".equals(model)) {
+            return new TemplateBundle(result, names);
+        }
+
+        File dir = new File(CONTINUE_TEMPLATE_DIR, model);
         if (!dir.exists() || !dir.isDirectory()) {
             System.err.println("[linker] 续盘模板目录不存在: " + dir.getAbsolutePath());
-            return Collections.emptyList();
+            return new TemplateBundle(result, names);
         }
         File[] files = dir.listFiles((d, name) -> {
             int idx = name.lastIndexOf('.');
@@ -384,11 +391,9 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         });
         if (files == null || files.length == 0) {
             System.err.println("[linker] 续盘模板目录为空: " + dir.getAbsolutePath());
-            return Collections.emptyList();
+            return new TemplateBundle(result, names);
         }
 
-        List<Mat> result = new ArrayList<>();
-        List<String> names = new ArrayList<>();
         for (File f : files) {
             try {
                 Mat t = Imgcodecs.imread(f.getAbsolutePath(), Imgcodecs.IMREAD_GRAYSCALE);
@@ -402,9 +407,9 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                 System.err.println("[linker] 模板加载异常: " + f.getAbsolutePath() + " - " + e.getMessage());
             }
         }
-        this.continueTemplateNames = names;
-        System.out.println("[linker] 加载续盘模板 " + result.size() + " 个: " + names);
-        return result;
+        System.out.println("[linker] 加载续盘模板 " + result.size()
+                + " 个（模型=" + model + "）: " + names);
+        return new TemplateBundle(result, names);
     }
 
     /**
