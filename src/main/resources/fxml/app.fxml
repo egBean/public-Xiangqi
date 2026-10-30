@@ -83,6 +83,7 @@
                     <Menu mnemonicParsing="false" text="连线">
                         <items>
                             <MenuItem mnemonicParsing="false" onAction="#linkSettingClick" text="连线参数" />
+                            <CheckMenuItem fx:id="autoNextGame" mnemonicParsing="false" onAction="#autoNextChecked" text="自动续盘" />
                             <CheckMenuItem fx:id="menuOfLinkBackMode" mnemonicParsing="false" onAction="#linkBackModeChecked" text="后台连线" />
                             <CheckMenuItem fx:id="menuOfLinkAnimation" mnemonicParsing="false" onAction="#linkAnimationChecked" text="开启动画确认" />
                         </items>

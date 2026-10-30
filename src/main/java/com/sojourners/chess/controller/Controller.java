@@ -145,6 +145,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     @FXML
     private CheckMenuItem menuOfLinkAnimation;
     @FXML
+    private CheckMenuItem autoNextGame;
+    @FXML
     private CheckMenuItem menuOfShowStatus;
     @FXML
     private CheckMenuItem menuOfShowNumber;
@@ -530,6 +532,12 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
     void linkAnimationChecked(ActionEvent event) {
         CheckMenuItem item = (CheckMenuItem) event.getTarget();
         prop.setLinkAnimation(item.isSelected());
+    }
+
+    @FXML
+    void autoNextChecked(ActionEvent event) {
+        CheckMenuItem item = (CheckMenuItem) event.getTarget();
+        prop.setAutoNext(item.isSelected());
     }
 
     @FXML
@@ -1385,6 +1393,8 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         menuOfLinkBackMode.setSelected(prop.isLinkBackMode());
         // 连线动画确认
         menuOfLinkAnimation.setSelected(prop.isLinkAnimation());
+        //自动续盘
+        autoNextGame.setSelected(prop.isAutoNext());
         // show number
         menuOfShowNumber.setSelected(prop.isShowNumber());
         // 显示状态栏

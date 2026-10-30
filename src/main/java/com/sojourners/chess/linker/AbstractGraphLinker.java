@@ -92,10 +92,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
     private Properties prop;
 
-    /**
-     * 是否自动续盘：对局结束后检测到"再来一局/继续"按钮时自动点击
-     */
-    private volatile boolean autoContinue = true;
 
     /**
      * 续盘按钮模板集合（灰度）。懒加载，null 表示尚未加载过。
@@ -119,14 +115,6 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         this.prop = Properties.getInstance();
         this.aiModel = new Yolo11Model();
         this.pause = false;
-    }
-
-    public void setAutoContinue(boolean autoContinue) {
-        this.autoContinue = autoContinue;
-    }
-
-    public boolean isAutoContinue() {
-        return autoContinue;
     }
 
     /**
@@ -195,7 +183,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
             while (!Thread.currentThread().isInterrupted()) {
                 scanCount++;
                 // 每 CONTINUE_CHECK_INTERVAL 次 scan，整窗截屏一次，检测续盘按钮（非观战模式下）
-                if (autoContinue && !callBack.isWatchMode() && scanCount % CONTINUE_CHECK_INTERVAL == 0) {
+                if (prop.isAutoNext() && !callBack.isWatchMode() && scanCount % CONTINUE_CHECK_INTERVAL == 0) {
                     checkAndClickContinue();
                 }
 

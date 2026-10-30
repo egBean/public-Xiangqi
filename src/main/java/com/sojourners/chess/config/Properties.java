@@ -79,6 +79,11 @@ public class Properties implements Serializable {
     private long linkScanTime;
     private int linkThreadNum;
     private boolean linkAnimation;
+
+    /**
+     * 自动下一盘
+     */
+    private boolean autoNext;
     private boolean linkShowInfo;
     private boolean linkBackMode;
 
@@ -97,6 +102,14 @@ public class Properties implements Serializable {
     private Double pieceOffsetX;
 
     private Integer boardOffsetX;
+
+    public boolean isAutoNext() {
+        return autoNext;
+    }
+
+    public void setAutoNext(boolean autoNext) {
+        this.autoNext = autoNext;
+    }
 
     public Integer getBoardOffsetX() {
         return boardOffsetX == null? 0 : boardOffsetX;
