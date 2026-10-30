@@ -11,6 +11,7 @@ import nu.pattern.OpenCV;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
@@ -19,6 +20,8 @@ import java.awt.event.InputEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -389,7 +392,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
         for (File f : files) {
             try {
-                Mat t = Imgcodecs.imread(f.getAbsolutePath(), Imgcodecs.IMREAD_GRAYSCALE);
+                Mat t = readGrayMat(f);
                 if (!t.empty()) {
                     result.add(t);
                     names.add(f.getName());
@@ -405,6 +408,21 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
         System.out.println("[linker] 加载续盘模板 " + result.size()
                 + " 个（平台=" + platform + "）: " + names);
         return new TemplateBundle(result, names);
+    }
+
+    /**
+     * 读取图片文件为灰度 Mat。
+     * 用 Files.readAllBytes + imdecode 而不是 imread，
+     * 避免 Windows 下 OpenCV 的 imread 对中文路径按 GBK 解码导致读不到文件。
+     */
+    private static Mat readGrayMat(File f) throws IOException {
+        byte[] bytes = Files.readAllBytes(f.toPath());
+        MatOfByte mob = new MatOfByte(bytes);
+        try {
+            return Imgcodecs.imdecode(mob, Imgcodecs.IMREAD_GRAYSCALE);
+        } finally {
+            mob.release();
+        }
     }
 
     /**
