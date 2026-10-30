@@ -369,7 +369,7 @@ public class Properties implements Serializable {
     }
 
     public String getLinkAiModel() {
-        return linkAiModel == null || linkAiModel.isBlank() ? "yolo11" : linkAiModel;
+        return linkAiModel == null || linkAiModel.isBlank() ? "无" : linkAiModel;
     }
 
     public void setLinkAiModel(String linkAiModel) {

@@ -82,9 +82,9 @@ public class LinkSettingController {
         mouseClickDelay.setText(String.valueOf(prop.getMouseClickDelay()));
         mouseMoveDelay.setText(String.valueOf(prop.getMouseMoveDelay()));
 
-        linkAiModel.getItems().setAll("yolo11", "pose");
+        linkAiModel.getItems().setAll("无","天天", "相弈");
         String model = prop.getLinkAiModel();
-        linkAiModel.setValue("yolo11".equalsIgnoreCase(model) ? "yolo11" : "pose");
+        linkAiModel.setValue(model);
 
     }
 
