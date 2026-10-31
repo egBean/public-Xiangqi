@@ -65,6 +65,10 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
      * 两次点击之间的最小间隔，避免按钮还没消失时重复点击
      */
     private static final long CONTINUE_CLICK_COOLDOWN_MS = 5000;
+    /**
+     * flag=4（可能识别到新棋局）连续出现多少次后，退出内层循环重新初始化棋盘
+     */
+    private static final int MAX_UNRECOGNIZED_COUNT = 10;
 
     /**
      * 扫描线程
@@ -185,8 +189,10 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
 
             // 每进入一轮识别，scan 计数从 0 开始
             int scanCount = 0;
+            // flag=4 连续出现次数，达到 MAX_UNRECOGNIZED_COUNT 后退出重新初始化棋盘
+            int unrecognizedCount = 0;
 
-            // 内层识别循环：失败只计数并继续重试，只有 flag=3 才退出重新初始化棋盘
+            // 内层识别循环：失败只计数并继续重试，只有 flag=3 或 flag=4 连续达到阈值才退出重新初始化棋盘
             while (!Thread.currentThread().isInterrupted()) {
                 scanCount++;
                 // 每 CONTINUE_CHECK_INTERVAL 次 scan，整窗截屏一次，检测续盘按钮（非观战模式下）
@@ -256,10 +262,12 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                     return;
                 }
                 if (action == null) {
+                    // 局面与引擎一致，视为识别正常，清除连续异常计数
+                    unrecognizedCount = 0;
                     continue;
                 }
 
-                System.out.println("action " + action);
+//                System.out.println("action " + action);
 
                 if (action.flag == 1) {
                     // 目标平台同步我方走棋
@@ -279,9 +287,21 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                     // 重新初始化棋盘时，可能目标平台动画还未走完导致局面识别错误 睡眠2s保证稳定
                     sleep(2000);
                     break;
-                } else if (action.flag == 4) {
-                    String fen = ChessBoard.fenCode(board2, null);
-                    System.err.println("[linker] 棋盘识别错误，新fen为：" + fen);
+                }
+
+                // 统一维护"可能识别到新棋局"的连续计数：
+                // flag=4 累加并在连续达到阈值时退出内层循环重新初始化棋盘；
+                // flag=1/2 说明识别正常、局面在推进，重置连续异常计数。
+                if (action.flag == 4) {
+                    unrecognizedCount++;
+                    if (unrecognizedCount >= MAX_UNRECOGNIZED_COUNT) {
+                        String fen = ChessBoard.fenCode(board2, null);
+                        System.err.println("[linker] 连续 " + MAX_UNRECOGNIZED_COUNT
+                                + " 次识别异常，异常fen为：" + fen + "，退出内层循环重新初始化棋盘");
+                        break;
+                    }
+                } else {
+                    unrecognizedCount = 0;
                 }
             }
         }
@@ -484,7 +504,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
          * 1    目标平台/连线棋盘走了一步，需要同步给引擎    compareBoard() 判断为对方走棋    callBack.linkerMove(...)
          * 2    引擎走了一步，需要同步到目标平台    compareBoard() 判断为引擎走棋    按 isReverse 转换坐标后 autoClick(...)
          * 3    确认识别到新棋局/局面差异过大    diff1 > 2 || diff2 >= 2 && diff3 > 2    break 跳出内层，回到外层重新找棋盘、重新初始化
-         * 4    可能识别到新棋局    差异总数异常但未达到 flag=3，连续 10 次才记录日志和截图，然后继续下一轮识别
+         * 4    可能识别到新棋局    差异总数异常但未达到 flag=3，连续 MAX_UNRECOGNIZED_COUNT 次才 break 跳出内层重新初始化棋盘
          */
         int flag;
         int x1;
