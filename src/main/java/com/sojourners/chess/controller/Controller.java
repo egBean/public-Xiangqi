@@ -1571,7 +1571,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         }
 
         linkComboBox.getItems().addAll("自动走棋", "观战模式");
-        linkComboBox.setValue("观战模式");
+        linkComboBox.setValue("自动走棋");
     }
 
     private void refreshEngineComboBox() {
