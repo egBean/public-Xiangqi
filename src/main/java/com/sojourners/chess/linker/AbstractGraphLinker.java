@@ -229,7 +229,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
                     boolean f = false;
                     do {
                         // 每次重识别前等待 100ms，让目标平台动画推进，避免同一帧反复识别
-                        sleep(50);
+                        sleep(0);
                         if (Thread.currentThread().isInterrupted()) {
                             return;
                         }
