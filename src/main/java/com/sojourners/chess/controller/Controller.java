@@ -673,7 +673,7 @@ public class Controller implements EngineCallBack, LinkerCallBack, ChessManualCa
         engine.setThreadNum(prop.getThreadNum());
         engine.setHashSize(prop.getHashSize());
         engine.setAnalysisModel(Engine.AnalysisModel.INFINITE, prop.getAnalysisValue());
-        engine.analysis(chessManualHandle.getFenCode(), chessManualHandle.getMoveList(), moves, moves.size());
+        engine.analysis(chessManualHandle.getFenCode(), chessManualHandle.getMoveList(), moves, 5);
         board.showMultiPV(engine.getMultiPV() > 1);
     }
 
