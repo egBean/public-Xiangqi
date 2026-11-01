@@ -68,7 +68,7 @@ public abstract class AbstractGraphLinker implements GraphLinker, Runnable {
     /**
      * flag=4（可能识别到新棋局）连续出现多少次后，退出内层循环重新初始化棋盘
      */
-    private static final int MAX_UNRECOGNIZED_COUNT = 10;
+    private static final int MAX_UNRECOGNIZED_COUNT = 20;
 
     /**
      * 扫描线程
