@@ -167,7 +167,7 @@ public class Yolo5Model extends OnnxModel {
         }
 
 //        System.gc();
-        System.out.println(System.currentTimeMillis() - s);
+//        System.out.println(System.currentTimeMillis() - s);
         return list;
     }
 
